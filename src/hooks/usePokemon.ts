@@ -4,7 +4,7 @@
  */
 
 import { useInfiniteQuery, useQuery, useQueries } from '@tanstack/react-query';
-import { fetchPokemonList, fetchPokemon, fetchPokemonByType } from '../services/api';
+import { fetchPokemonList, fetchPokemon, fetchPokemonByType, fetchPokemonDetail } from '../services/api';
 import type { PokemonListResponse, Pokemon, PokemonListItem } from '../types/pokemon';
 
 /**
@@ -118,4 +118,24 @@ export function usePokemonByTypes(selectedTypes: string[]) {
     isError,
     error: errors.length > 0 ? errors[0] : null,
   };
+}
+
+/**
+ * Custom hook for fetching Pokemon detail data by name.
+ * Uses React Query's useQuery for efficient data fetching with caching.
+ * 
+ * - Fetches complete Pokemon data by name or ID
+ * - Automatically caches results to avoid redundant API calls
+ * - Used for Pokemon detail page
+ * 
+ * @param name - Pokemon name or ID (e.g., "pikachu", "25", "charizard")
+ * @returns React Query query object with Pokemon data
+ */
+export function usePokemonDetail(name: string) {
+  return useQuery<Pokemon, Error>({
+    queryKey: ['pokemon', name],
+    queryFn: () => fetchPokemonDetail(name),
+    enabled: !!name, // Only fetch if name is provided
+    staleTime: 1000 * 60 * 10, // 10 minutes (Pokemon data doesn't change often)
+  });
 }

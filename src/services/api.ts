@@ -124,3 +124,41 @@ export async function fetchPokemonByType(typeName: string): Promise<PokemonListI
     throw new Error(`Unexpected error fetching Pokemon by type: ${String(error)}`);
   }
 }
+
+/**
+ * Fetches Pokemon detail data by name from the Pokemon API.
+ * 
+ * API Integration: https://pokeapi.co/api/v2/pokemon/{name}
+ * - Fetches complete Pokemon data including sprites, types, stats, and abilities
+ * - Uses Pokemon name (can be ID or name string)
+ * - Used for Pokemon detail page
+ * 
+ * @param name - Pokemon name or ID (e.g., "pikachu", "25", "charizard")
+ * @returns Promise<Pokemon> with complete Pokemon data
+ */
+export async function fetchPokemonDetail(name: string): Promise<Pokemon> {
+  try {
+    const url = `${POKEAPI_BASE_URL}/pokemon/${name.toLowerCase()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch Pokemon detail: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: Pokemon = await response.json();
+
+    // Validate response structure
+    if (!data.name || !data.id) {
+      throw new Error('Invalid response format from Pokemon API');
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Unexpected error fetching Pokemon detail: ${String(error)}`);
+  }
+}

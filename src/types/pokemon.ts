@@ -37,6 +37,53 @@ export interface PokemonSprites {
 }
 
 /**
+ * Pokemon Stat
+ * Represents a Pokemon stat (HP, Attack, Defense, etc.).
+ */
+export interface PokemonStat {
+  /** Base stat value (e.g., 80 for HP) */
+  base_stat: number;
+  /** Effort value (EV) gained when defeating this Pokemon */
+  effort: number;
+  stat: {
+    /** Stat name (e.g., "hp", "attack", "defense") */
+    name: string;
+    /** API URL for detailed stat information */
+    url: string;
+  };
+}
+
+/**
+ * Pokemon Ability
+ * Represents a Pokemon ability.
+ */
+export interface PokemonAbility {
+  /** Whether this is a hidden ability */
+  is_hidden: boolean;
+  /** Slot number (1-3) */
+  slot: number;
+  ability: {
+    /** Ability name (e.g., "static", "lightning-rod") */
+    name: string;
+    /** API URL for detailed ability information */
+    url: string;
+  };
+}
+
+/**
+ * Pokemon Move
+ * Represents a move that a Pokemon can learn.
+ */
+export interface PokemonMove {
+  move: {
+    /** Move name (e.g., "thunderbolt", "quick-attack") */
+    name: string;
+    /** API URL for detailed move information */
+    url: string;
+  };
+}
+
+/**
  * Complete Pokemon data from the Pokemon API.
  * API: https://pokeapi.co/api/v2/pokemon/{id}
  */
@@ -46,6 +93,12 @@ export interface Pokemon {
   sprites: PokemonSprites;
   /** Array of types (most Pokemon have 1-2 types) */
   types: PokemonType[];
+  /** Array of stats (HP, Attack, Defense, etc.) */
+  stats: PokemonStat[];
+  /** Array of abilities */
+  abilities: PokemonAbility[];
+  /** Array of moves this Pokemon can learn */
+  moves: PokemonMove[];
 }
 
 /**
