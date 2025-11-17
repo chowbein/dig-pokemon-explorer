@@ -62,6 +62,24 @@ export function TeamSidebar() {
   });
 
   /**
+   * Gets size classes based on count for visual prominence.
+   * Higher counts get larger badges to make them more noticeable.
+   */
+  const getSizeClasses = (count: number): string => {
+    if (count >= 5) {
+      return 'px-4 py-2 text-lg font-bold transform scale-110'; // Largest for very high counts (5-6)
+    } else if (count >= 4) {
+      return 'px-4 py-1.5 text-base font-bold transform scale-105'; // Large for high counts
+    } else if (count >= 3) {
+      return 'px-3 py-1.5 text-sm font-semibold'; // Medium-large
+    } else if (count >= 2) {
+      return 'px-2.5 py-1 text-xs font-medium'; // Medium
+    } else {
+      return 'px-2 py-0.5 text-xs font-normal opacity-75'; // Smallest for count of 1
+    }
+  };
+
+  /**
    * Handles drag over event on a slot.
    * Prevents default to allow drop and provides visual feedback.
    */
@@ -263,19 +281,22 @@ export function TeamSidebar() {
                   <h4 className="text-xs font-medium text-red-600 dark:text-red-400 mb-2">
                     Team Weaknesses
                   </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(weaknesses).map(([typeName, count]) => {
-                      const colors = getTypeColors(typeName);
-                      return (
-                        <span
-                          key={typeName}
-                          className={`px-2 py-1 rounded text-xs font-medium ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
-                          title={`${count} team member${count > 1 ? 's' : ''} weak to ${typeName}`}
-                        >
-                          {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
-                        </span>
-                      );
-                    })}
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    {Object.entries(weaknesses)
+                      .sort(([, countA], [, countB]) => countB - countA) // Sort by count (highest first)
+                      .map(([typeName, count]) => {
+                        const colors = getTypeColors(typeName);
+                        const sizeClasses = getSizeClasses(count);
+                        return (
+                          <span
+                            key={typeName}
+                            className={`inline-flex items-center rounded ${sizeClasses} ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
+                            title={`${count} team member${count > 1 ? 's' : ''} weak to ${typeName}`}
+                          >
+                            {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
+                          </span>
+                        );
+                      })}
                   </div>
                 </div>
               )}
@@ -286,19 +307,22 @@ export function TeamSidebar() {
                   <h4 className="text-xs font-medium text-green-600 dark:text-green-400 mb-2">
                     Team Resistances
                   </h4>
-                  <div className="flex flex-wrap gap-1.5">
-                    {Object.entries(resistances).map(([typeName, count]) => {
-                      const colors = getTypeColors(typeName);
-                      return (
-                        <span
-                          key={typeName}
-                          className={`px-2 py-1 rounded text-xs font-medium ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
-                          title={`${count} team member${count > 1 ? 's' : ''} resist ${typeName}`}
-                        >
-                          {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
-                        </span>
-                      );
-                    })}
+                  <div className="flex flex-wrap gap-1.5 items-center">
+                    {Object.entries(resistances)
+                      .sort(([, countA], [, countB]) => countB - countA) // Sort by count (highest first)
+                      .map(([typeName, count]) => {
+                        const colors = getTypeColors(typeName);
+                        const sizeClasses = getSizeClasses(count);
+                        return (
+                          <span
+                            key={typeName}
+                            className={`inline-flex items-center rounded ${sizeClasses} ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
+                            title={`${count} team member${count > 1 ? 's' : ''} resist ${typeName}`}
+                          >
+                            {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
+                          </span>
+                        );
+                      })}
                   </div>
                 </div>
               )}
