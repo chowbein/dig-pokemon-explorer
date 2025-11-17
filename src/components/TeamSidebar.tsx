@@ -30,6 +30,7 @@ import type { TeamPokemon } from '../context/TeamContext';
 export function TeamSidebar() {
   const { team, removePokemonFromTeam, addPokemonToTeam, isTeamFull, isPokemonInTeam } = useTeam();
   const [draggedOverSlot, setDraggedOverSlot] = useState<number | null>(null);
+  const [isDraggingOverTeam, setIsDraggingOverTeam] = useState(false);
 
   // Fetch Pokemon data for each team member to get types
   const pokemonQueries = useQueries({
@@ -213,12 +214,15 @@ export function TeamSidebar() {
   };
 
   /**
-   * Handles drop event on a slot.
+   * Handles drop event on a slot or team area.
    * Extracts Pokemon data from dataTransfer and adds to team.
+   * Automatically finds the next available slot if dropped anywhere in team area.
    */
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, slotIndex: number) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, slotIndex?: number) => {
     e.preventDefault();
+    e.stopPropagation();
     setDraggedOverSlot(null);
+    setIsDraggingOverTeam(false);
 
     try {
       const pokemonDataJson = e.dataTransfer.getData('application/json');
@@ -241,10 +245,47 @@ export function TeamSidebar() {
         return;
       }
 
-      // Add Pokemon to team
+      // Add Pokemon to team (automatically goes to next available slot)
       addPokemonToTeam(pokemonData);
     } catch (error) {
       console.error('Error handling drop:', error);
+    }
+  };
+
+  /**
+   * Handles drag over event on the team area.
+   * Prevents default to allow drop and provides visual feedback.
+   */
+  const handleTeamDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (!isTeamFull) {
+      e.dataTransfer.dropEffect = 'move';
+      setIsDraggingOverTeam(true);
+    }
+  };
+
+  /**
+   * Handles drag leave event on the team area.
+   * Removes visual feedback when dragging leaves the team area.
+   */
+  const handleTeamDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Only remove feedback if we're actually leaving the team area
+    // Check if we're moving to a child element
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+    
+    // If mouse is outside the team area, remove feedback
+    if (
+      x < rect.left ||
+      x > rect.right ||
+      y < rect.top ||
+      y > rect.bottom
+    ) {
+      setIsDraggingOverTeam(false);
+      setDraggedOverSlot(null);
     }
   };
 
@@ -253,24 +294,38 @@ export function TeamSidebar() {
       <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
         My Team ({team.length}/6)
       </h2>
-      <div className="grid grid-cols-3 gap-3 mb-4">
+      <div
+        className={`grid grid-cols-3 gap-3 mb-4 p-2 rounded-lg transition-all ${
+          isDraggingOverTeam && !isTeamFull
+            ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 dark:ring-blue-500 ring-dashed'
+            : ''
+        }`}
+        onDragOver={handleTeamDragOver}
+        onDragLeave={handleTeamDragLeave}
+        onDrop={handleDrop}
+      >
         {slots.map((pokemon, index) => (
           <div
             key={index}
             className={`relative aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center overflow-hidden transition-all ${
               pokemon
                 ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50'
-                : draggedOverSlot === index
+                : draggedOverSlot === index || (isDraggingOverTeam && !isTeamFull)
                 ? 'border-blue-500 dark:border-blue-400 bg-blue-100 dark:bg-blue-900/30 border-solid'
                 : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 hover:border-gray-400 dark:hover:border-gray-500'
             }`}
             onDragOver={(e) => {
+              e.stopPropagation();
               if (!pokemon) {
                 handleDragOver(e, index);
               }
             }}
-            onDragLeave={handleDragLeave}
+            onDragLeave={(e) => {
+              e.stopPropagation();
+              handleDragLeave();
+            }}
             onDrop={(e) => {
+              e.stopPropagation();
               if (!pokemon) {
                 handleDrop(e, index);
               }
