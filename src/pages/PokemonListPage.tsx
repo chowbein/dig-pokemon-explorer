@@ -4,11 +4,13 @@
  */
 
 import { useEffect, useRef, useState, useMemo } from 'react';
-import { useInfinitePokemon, usePokemonByTypes } from '../hooks/usePokemon';
+import { useSearchParams } from 'react-router-dom';
+import { useInfinitePokemon, usePokemonByTypes, useFilteredPokemonByType } from '../hooks/usePokemon';
 import { PokemonCardWithData } from '../components/PokemonCardWithData';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { POKEMON_TYPES } from '../lib/pokemonTypes';
 import { getTypeColors } from '../lib/pokemonTypeColors';
+import type { PokemonListItem } from '../types/pokemon';
 
 /**
  * Pokemon list page with infinite scrolling and hybrid filtering.
@@ -25,8 +27,27 @@ import { getTypeColors } from '../lib/pokemonTypeColors';
  * - Automatically fetches next page when user scrolls to bottom (when not type-filtering)
  */
 export function PokemonListPage() {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Read types from URL search parameter
+  // API Integration: Reads counter types from URL query string (?types=water,rock)
+  const urlTypesParam = searchParams.get('types');
+  const urlTypes = useMemo(() => {
+    if (urlTypesParam) {
+      return urlTypesParam.split(',').filter((type) => type.trim().length > 0);
+    }
+    return [];
+  }, [urlTypesParam]);
+
+  const hasUrlTypesFilter = urlTypes.length > 0;
+
+  // Fetch Pokemon filtered by URL types (counter recommendations)
+  const {
+    data: urlFilteredData,
+    isLoading: isLoadingUrlFilter,
+  } = useFilteredPokemonByType(urlTypes);
 
   // Regular infinite query for all Pokemon
   const {
@@ -47,19 +68,33 @@ export function PokemonListPage() {
     error: errorTypes,
   } = usePokemonByTypes(selectedTypes);
 
-  // Determine which data source to use
+  /**
+   * Clears the URL types filter and returns to main list.
+   */
+  const clearUrlFilter = () => {
+    setSearchParams({});
+  };
+
+  // Determine which data source to use (priority: URL filter > checkbox filter > infinite scroll)
   const hasTypeFilter = selectedTypes.length > 0;
-  const isLoading = hasTypeFilter ? isLoadingTypes : isLoadingInfinite;
+  const isLoading = hasUrlTypesFilter
+    ? isLoadingUrlFilter
+    : hasTypeFilter
+    ? isLoadingTypes
+    : isLoadingInfinite;
   const isError = hasTypeFilter ? isErrorTypes : isErrorInfinite;
   const error = hasTypeFilter ? errorTypes : errorInfinite;
 
-  // Get base Pokemon list (either from type filter or infinite scroll)
+  // Get base Pokemon list (priority: URL filter > checkbox filter > infinite scroll)
   const basePokemon = useMemo(() => {
+    if (hasUrlTypesFilter) {
+      return urlFilteredData || [];
+    }
     if (hasTypeFilter) {
       return typeFilteredData || [];
     }
     return infiniteData?.pages.flatMap((page) => page.results) || [];
-  }, [hasTypeFilter, typeFilteredData, infiniteData]);
+  }, [hasUrlTypesFilter, urlFilteredData, hasTypeFilter, typeFilteredData, infiniteData]);
 
   // Apply client-side name search filter
   const filteredPokemon = useMemo(() => {
@@ -67,7 +102,7 @@ export function PokemonListPage() {
       return basePokemon;
     }
     const query = searchQuery.toLowerCase().trim();
-    return basePokemon.filter((pokemon) =>
+    return basePokemon.filter((pokemon: PokemonListItem) =>
       pokemon.name.toLowerCase().includes(query)
     );
   }, [basePokemon, searchQuery]);
@@ -86,8 +121,8 @@ export function PokemonListPage() {
 
   // Intersection Observer to detect when user reaches bottom (only when not type-filtering)
   useEffect(() => {
-    // Disable infinite scroll when type filtering (type endpoint returns all results at once)
-    if (hasTypeFilter) {
+    // Disable infinite scroll when type filtering or URL filtering (type endpoint returns all results at once)
+    if (hasTypeFilter || hasUrlTypesFilter) {
       return;
     }
 
@@ -115,7 +150,7 @@ export function PokemonListPage() {
         observer.unobserve(currentRef);
       }
     };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, hasTypeFilter]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, hasTypeFilter, hasUrlTypesFilter]);
 
 
   if (isLoading) {
@@ -141,9 +176,24 @@ export function PokemonListPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-8 text-center">
-        Pokemon Explorer
-      </h1>
+      <div className="flex items-center justify-between mb-8">
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
+          Pokemon Explorer
+        </h1>
+        {hasUrlTypesFilter && (
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing counters for: <span className="font-semibold text-gray-800 dark:text-gray-200">{urlTypes.join(', ')}</span>
+            </div>
+            <button
+              onClick={clearUrlFilter}
+              className="px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
+            >
+              Clear Filter
+            </button>
+          </div>
+        )}
+      </div>
 
       {/* Filters Section */}
       <div className="mb-8 space-y-4">

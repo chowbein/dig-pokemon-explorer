@@ -3,11 +3,11 @@
  * Displays the user's Pokemon team with 6 slots and team weaknesses/resistances.
  */
 
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { useQueries } from '@tanstack/react-query';
-import { fetchPokemonDetail } from '../services/api';
+import { fetchPokemonDetail, fetchTypeData } from '../services/api';
 import { useTeamTypeAnalysis } from '../hooks/useTeamTypeAnalysis';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 import type { TeamPokemon } from '../context/TeamContext';
@@ -30,6 +30,52 @@ export function TeamSidebar() {
   const { team, removePokemonFromTeam, addPokemonToTeam, isTeamFull, isPokemonInTeam } = useTeam();
   const [draggedOverSlot, setDraggedOverSlot] = useState<number | null>(null);
   const [isDraggingOverTeam, setIsDraggingOverTeam] = useState(false);
+  const [isLoadingCounterTypes, setIsLoadingCounterTypes] = useState(false);
+  const navigate = useNavigate();
+
+  /**
+   * Handles "Find a Counter" button click.
+   * Fetches type data for the top weakness and extracts counter types.
+   */
+  const handleFindCounter = async () => {
+    if (!topWeaknessType) return;
+
+    setIsLoadingCounterTypes(true);
+    try {
+      const typeData = await fetchTypeData(topWeaknessType);
+      extractAndNavigate(typeData);
+    } catch (error) {
+      console.error('Failed to fetch counter types:', error);
+    } finally {
+      setIsLoadingCounterTypes(false);
+    }
+  };
+
+  /**
+   * Extracts counter types and navigates to filtered list.
+   * Counter types are types that resist or are immune to the weakness
+   * (types that the weakness deals half or no damage to).
+   */
+  const extractAndNavigate = (typeData: { damage_relations?: { half_damage_to?: Array<{ name: string }>; no_damage_to?: Array<{ name: string }> } }) => {
+    if (!typeData?.damage_relations) return;
+
+    const counterTypes = new Set<string>();
+    
+    // Types that deal half damage to the weakness (resistant counters)
+    typeData.damage_relations.half_damage_to?.forEach((type: { name: string }) => {
+      counterTypes.add(type.name);
+    });
+
+    // Types that deal no damage to the weakness (immune counters)
+    typeData.damage_relations.no_damage_to?.forEach((type: { name: string }) => {
+      counterTypes.add(type.name);
+    });
+
+    // Navigate with counter types as URL parameter
+    const typesParam = Array.from(counterTypes).join(',');
+    navigate(`/?types=${typesParam}`);
+  };
+
 
   // Fetch Pokemon data for each team member (needed for display and type analysis)
   const pokemonQueries = useQueries({
@@ -52,6 +98,16 @@ export function TeamSidebar() {
   // API Integration: Fetches type data from PokeAPI and aggregates weaknesses/resistances
   const { isLoading: isLoadingTypeAnalysis, weaknesses, resistances } =
     useTeamTypeAnalysis(teamWithTypes);
+
+  // Find the top weakness (highest count)
+  // Complex Logic: Identifies the biggest defensive weakness from team analysis
+  const topWeaknessType = useMemo(() => {
+    if (Object.keys(weaknesses).length === 0) return null;
+    
+    const entries = Object.entries(weaknesses);
+    const sorted = entries.sort(([, countA], [, countB]) => countB - countA);
+    return sorted[0]?.[0] || null;
+  }, [weaknesses]);
 
   const isLoadingPokemon = pokemonQueries.some((query) => query.isLoading);
   const isLoading = isLoadingPokemon || isLoadingTypeAnalysis;
@@ -281,7 +337,7 @@ export function TeamSidebar() {
                   <h4 className="text-xs font-medium text-red-600 dark:text-red-400 mb-2">
                     Team Weaknesses
                   </h4>
-                  <div className="flex flex-wrap gap-1.5 items-center">
+                  <div className="flex flex-wrap gap-1.5 items-center mb-2">
                     {Object.entries(weaknesses)
                       .sort(([, countA], [, countB]) => countB - countA) // Sort by count (highest first)
                       .map(([typeName, count]) => {
@@ -298,6 +354,29 @@ export function TeamSidebar() {
                         );
                       })}
                   </div>
+                  
+                  {/* Top Weakness Recommendation */}
+                  {topWeaknessType && (
+                    <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex-1">
+                          <p className="text-xs font-medium text-red-800 dark:text-red-200 mb-1">
+                            Biggest Weakness:
+                          </p>
+                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
+                            {topWeaknessType.charAt(0).toUpperCase() + topWeaknessType.slice(1)}
+                          </span>
+                        </div>
+                        <button
+                          onClick={handleFindCounter}
+                          disabled={isLoadingCounterTypes || !topWeaknessType}
+                          className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded transition-colors whitespace-nowrap"
+                        >
+                          {isLoadingCounterTypes ? 'Finding...' : 'Find a Counter'}
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 

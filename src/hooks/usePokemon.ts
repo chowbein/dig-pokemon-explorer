@@ -3,6 +3,7 @@
  * Custom React hooks for fetching Pokemon data using React Query.
  */
 
+import { useMemo } from 'react';
 import { useInfiniteQuery, useQuery, useQueries } from '@tanstack/react-query';
 import {
   fetchPokemonList,
@@ -13,7 +14,7 @@ import {
   fetchEvolutionChain,
   fetchTypeData,
 } from '../services/api';
-import type { PokemonListResponse, Pokemon, PokemonListItem, EvolutionChainItem, TypeDataResponse } from '../types/pokemon';
+import type { PokemonListResponse, Pokemon, PokemonListItem, EvolutionChainItem, TypeDataResponse, PokemonTypeResponse } from '../types/pokemon';
 
 /**
  * Custom hook for infinite scrolling Pokemon list.
@@ -215,5 +216,69 @@ export function useTypeData(typeNames: string[]) {
     isLoading,
     isError,
     error: errors.length > 0 ? errors[0] : null,
+  };
+}
+
+/**
+ * Custom hook for fetching Pokemon filtered by multiple types from URL parameters.
+ * Uses React Query's useQueries to fetch type data concurrently and combines Pokemon lists.
+ * 
+ * - Fetches type data for all specified types in parallel
+ * - Combines Pokemon arrays from each type response
+ * - De-duplicates Pokemon that appear in multiple types
+ * - Returns combined list and loading state
+ * 
+ * @param types - Array of Pokemon type names to filter by
+ * @returns Object with filtered Pokemon list and loading state
+ */
+export function useFilteredPokemonByType(types: string[]) {
+  // Fetch type data for all specified types concurrently
+  // API Integration: Fetches from https://pokeapi.co/api/v2/type/{typeName}
+  const typeQueries = useQueries({
+    queries: types.map((typeName) => ({
+      queryKey: ['typeWithPokemon', typeName],
+      queryFn: async (): Promise<PokemonTypeResponse> => {
+        const url = `https://pokeapi.co/api/v2/type/${typeName.toLowerCase()}`;
+        const response = await fetch(url);
+        if (!response.ok) {
+          throw new Error(`Failed to fetch type: ${response.status} ${response.statusText}`);
+        }
+        return response.json();
+      },
+      enabled: types.length > 0,
+      staleTime: 1000 * 60 * 30, // 30 minutes
+    })),
+  });
+
+  const isLoading = typeQueries.some((query) => query.isLoading);
+
+  // Combine and de-duplicate Pokemon from all types
+  // Complex Logic: Merges Pokemon arrays and removes duplicates by name
+  const filteredPokemon = useMemo(() => {
+    if (typeQueries.every((query) => query.data)) {
+      const allPokemon: PokemonListItem[] = [];
+      const seenNames = new Set<string>();
+
+      typeQueries.forEach((query) => {
+        if (query.data?.pokemon) {
+          query.data.pokemon.forEach((entry) => {
+            const pokemonName = entry.pokemon.name;
+            if (!seenNames.has(pokemonName)) {
+              seenNames.add(pokemonName);
+              allPokemon.push(entry.pokemon);
+            }
+          });
+        }
+      });
+
+      return allPokemon;
+    }
+
+    return [];
+  }, [typeQueries]);
+
+  return {
+    data: filteredPokemon,
+    isLoading,
   };
 }

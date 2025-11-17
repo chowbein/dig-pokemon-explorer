@@ -230,6 +230,16 @@ export interface TypeDamageRelations {
     name: string;
     url: string;
   }>;
+  /** Types that this type deals half damage to (counter types) */
+  half_damage_to: Array<{
+    name: string;
+    url: string;
+  }>;
+  /** Types that this type deals no damage to (immune counter types) */
+  no_damage_to: Array<{
+    name: string;
+    url: string;
+  }>;
 }
 
 /**
