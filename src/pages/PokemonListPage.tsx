@@ -4,7 +4,7 @@
  */
 
 import { useInfinitePokemon } from '../hooks/usePokemon';
-import { PokemonCard } from '../components/PokemonCard';
+import { PokemonCardWithData } from '../components/PokemonCardWithData';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 
 /**
@@ -15,7 +15,7 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
  * - Shows loading spinner during initial fetch
  * - Displays error message if fetch fails
  * - Maps over all pages to render Pokemon cards
- * - Extracts Pokemon ID from API URL to construct image URLs
+ * - Each card fetches its own data (N+1 query pattern) for complete Pokemon info
  * - Load More button fetches next page and disables during fetch or when no more pages
  */
 export function PokemonListPage() {
@@ -29,22 +29,6 @@ export function PokemonListPage() {
     isFetchingNextPage,
   } = useInfinitePokemon();
 
-  /**
-   * Extracts Pokemon ID from API URL.
-   * Pokemon API URLs format: https://pokeapi.co/api/v2/pokemon/{id}/
-   */
-  const extractPokemonId = (url: string): number => {
-    const match = url.match(/\/pokemon\/(\d+)\//);
-    return match ? parseInt(match[1], 10) : 0;
-  };
-
-  /**
-   * Constructs Pokemon sprite image URL from ID.
-   * Uses official artwork sprite from PokeAPI CDN.
-   */
-  const getPokemonImageUrl = (id: number): string => {
-    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
-  };
 
   if (isLoading) {
     return (
@@ -86,19 +70,13 @@ export function PokemonListPage() {
 
       {/* Pokemon Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-        {allPokemon.map((pokemon) => {
-          const pokemonId = extractPokemonId(pokemon.url);
-          const imageUrl = getPokemonImageUrl(pokemonId);
-
-          return (
-            <PokemonCard
-              key={pokemon.name}
-              name={pokemon.name}
-              image={imageUrl}
-              types={[]} // Types not available from list endpoint, would need individual fetch
-            />
-          );
-        })}
+        {allPokemon.map((pokemon) => (
+          <PokemonCardWithData
+            key={pokemon.name}
+            url={pokemon.url}
+            name={pokemon.name}
+          />
+        ))}
       </div>
 
       {/* Load More Button */}

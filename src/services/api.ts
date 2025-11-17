@@ -3,7 +3,7 @@
  * Separates API calls from component logic for better architecture and testability.
  */
 
-import type { PokemonListResponse } from '../types/pokemon';
+import type { PokemonListResponse, Pokemon } from '../types/pokemon';
 
 /** Base URL for the Pokemon API */
 const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
@@ -49,5 +49,41 @@ export async function fetchPokemonList({
       throw error;
     }
     throw new Error(`Unexpected error fetching Pokemon list: ${String(error)}`);
+  }
+}
+
+/**
+ * Fetches individual Pokemon data from the Pokemon API.
+ * 
+ * API Integration: Uses the URL from PokemonListItem.url
+ * - Fetches complete Pokemon data including sprites and types
+ * - Used for individual Pokemon cards (N+1 query pattern)
+ * 
+ * @param url - Pokemon API URL from PokemonListItem
+ * @returns Promise<Pokemon> with complete Pokemon data
+ */
+export async function fetchPokemon(url: string): Promise<Pokemon> {
+  try {
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch Pokemon: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: Pokemon = await response.json();
+
+    // Validate response structure
+    if (!data.name || !data.id) {
+      throw new Error('Invalid response format from Pokemon API');
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Unexpected error fetching Pokemon: ${String(error)}`);
   }
 }

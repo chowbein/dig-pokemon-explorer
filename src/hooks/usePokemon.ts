@@ -3,9 +3,9 @@
  * Custom React hooks for fetching Pokemon data using React Query.
  */
 
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { fetchPokemonList } from '../services/api';
-import type { PokemonListResponse } from '../types/pokemon';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { fetchPokemonList, fetchPokemon } from '../services/api';
+import type { PokemonListResponse, Pokemon } from '../types/pokemon';
 
 /**
  * Custom hook for infinite scrolling Pokemon list.
@@ -40,5 +40,25 @@ export function useInfinitePokemon() {
         return undefined;
       }
     },
+  });
+}
+
+/**
+ * Custom hook for fetching individual Pokemon data.
+ * Uses React Query's useQuery for efficient data fetching with caching.
+ * 
+ * - Fetches complete Pokemon data including sprites and types
+ * - Automatically caches results to avoid redundant API calls
+ * - Used for individual Pokemon cards (N+1 query pattern)
+ * 
+ * @param url - Pokemon API URL from PokemonListItem
+ * @returns React Query query object with Pokemon data
+ */
+export function usePokemon(url: string | null) {
+  return useQuery<Pokemon, Error>({
+    queryKey: ['pokemon', url],
+    queryFn: () => fetchPokemon(url!),
+    enabled: !!url, // Only fetch if URL is provided
+    staleTime: 1000 * 60 * 10, // 10 minutes (Pokemon data doesn't change often)
   });
 }
