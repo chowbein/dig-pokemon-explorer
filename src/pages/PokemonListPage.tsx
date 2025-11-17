@@ -1,40 +1,96 @@
 /**
  * Pokemon List Page
- * Displays a paginated grid of Pokemon cards with infinite scroll functionality.
+ * Displays a paginated grid of Pokemon cards with infinite scroll functionality and hybrid filtering.
  */
 
-import { useEffect, useRef } from 'react';
-import { useInfinitePokemon } from '../hooks/usePokemon';
+import { useEffect, useRef, useState, useMemo } from 'react';
+import { useInfinitePokemon, usePokemonByTypes } from '../hooks/usePokemon';
 import { PokemonCardWithData } from '../components/PokemonCardWithData';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { POKEMON_TYPES } from '../lib/pokemonTypes';
+import { getTypeColors } from '../lib/pokemonTypeColors';
 
 /**
- * Pokemon list page with infinite scrolling.
- * Uses useInfinitePokemon hook to fetch paginated Pokemon data.
+ * Pokemon list page with infinite scrolling and hybrid filtering.
+ * Uses useInfinitePokemon hook for paginated data and usePokemonByTypes for type filtering.
  * Displays Pokemon cards in a grid layout with infinite scroll functionality.
  * 
  * - Shows loading spinner during initial fetch
  * - Displays error message if fetch fails
  * - Maps over all pages to render Pokemon cards
  * - Each card fetches its own data (N+1 query pattern) for complete Pokemon info
- * - Automatically fetches next page when user scrolls to bottom (infinite scroll)
+ * - Type filtering: Multi-select checkboxes that fetch from type-specific API endpoints
+ * - Name search: Client-side filtering on currently displayed results
+ * - Filters work together: Type filter affects API calls, name search filters displayed results
+ * - Automatically fetches next page when user scrolls to bottom (when not type-filtering)
  */
 export function PokemonListPage() {
+  const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Regular infinite query for all Pokemon
   const {
-    data,
-    isLoading,
-    isError,
-    error,
+    data: infiniteData,
+    isLoading: isLoadingInfinite,
+    isError: isErrorInfinite,
+    error: errorInfinite,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
   } = useInfinitePokemon();
 
-  // Ref for the sentinel element that triggers infinite scroll
+  // Type-filtered Pokemon (fetches when types are selected)
+  const {
+    data: typeFilteredData,
+    isLoading: isLoadingTypes,
+    isError: isErrorTypes,
+    error: errorTypes,
+  } = usePokemonByTypes(selectedTypes);
+
+  // Determine which data source to use
+  const hasTypeFilter = selectedTypes.length > 0;
+  const isLoading = hasTypeFilter ? isLoadingTypes : isLoadingInfinite;
+  const isError = hasTypeFilter ? isErrorTypes : isErrorInfinite;
+  const error = hasTypeFilter ? errorTypes : errorInfinite;
+
+  // Get base Pokemon list (either from type filter or infinite scroll)
+  const basePokemon = useMemo(() => {
+    if (hasTypeFilter) {
+      return typeFilteredData || [];
+    }
+    return infiniteData?.pages.flatMap((page) => page.results) || [];
+  }, [hasTypeFilter, typeFilteredData, infiniteData]);
+
+  // Apply client-side name search filter
+  const filteredPokemon = useMemo(() => {
+    if (!searchQuery.trim()) {
+      return basePokemon;
+    }
+    const query = searchQuery.toLowerCase().trim();
+    return basePokemon.filter((pokemon) =>
+      pokemon.name.toLowerCase().includes(query)
+    );
+  }, [basePokemon, searchQuery]);
+
+  // Handle type checkbox toggle
+  const toggleType = (type: string) => {
+    setSelectedTypes((prev) =>
+      prev.includes(type)
+        ? prev.filter((t) => t !== type)
+        : [...prev, type]
+    );
+  };
+
+  // Ref for the sentinel element that triggers infinite scroll (only when not type-filtering)
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer to detect when user reaches bottom
+  // Intersection Observer to detect when user reaches bottom (only when not type-filtering)
   useEffect(() => {
+    // Disable infinite scroll when type filtering (type endpoint returns all results at once)
+    if (hasTypeFilter) {
+      return;
+    }
+
     const observer = new IntersectionObserver(
       (entries) => {
         // If sentinel is visible, has next page, and not currently fetching, load more
@@ -59,7 +115,7 @@ export function PokemonListPage() {
         observer.unobserve(currentRef);
       }
     };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, hasTypeFilter]);
 
 
   if (isLoading) {
@@ -83,48 +139,138 @@ export function PokemonListPage() {
     );
   }
 
-  if (!data || !data.pages.length) {
-    return (
-      <div className="flex justify-center items-center min-h-screen">
-        <p className="text-gray-600 dark:text-gray-400">No Pokemon found</p>
-      </div>
-    );
-  }
-
-  // Flatten all Pokemon from all pages
-  const allPokemon = data.pages.flatMap((page) => page.results);
-
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200 mb-8 text-center">
         Pokemon Explorer
       </h1>
 
-      {/* Pokemon Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-        {allPokemon.map((pokemon) => (
-          <PokemonCardWithData
-            key={pokemon.name}
-            url={pokemon.url}
-            name={pokemon.name}
+      {/* Filters Section */}
+      <div className="mb-8 space-y-4">
+        {/* Name Search Input */}
+        <div>
+          <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Search by Name
+          </label>
+          <input
+            id="search"
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder="Search Pokemon by name..."
+            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
-        ))}
+        </div>
+
+        {/* Type Filter Checkboxes */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+            Filter by Type (select multiple)
+          </label>
+          <div className="flex flex-wrap gap-2 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 max-h-48 overflow-y-auto">
+            {POKEMON_TYPES.map((type) => {
+              const isSelected = selectedTypes.includes(type);
+              const typeColors = getTypeColors(type);
+              const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
+
+              return (
+                <label
+                  key={type}
+                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all ${
+                    isSelected
+                      ? `${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark} ring-2 ring-offset-2 ring-blue-500`
+                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    checked={isSelected}
+                    onChange={() => toggleType(type)}
+                    className="sr-only"
+                  />
+                  {capitalizedType}
+                </label>
+              );
+            })}
+          </div>
+          {selectedTypes.length > 0 && (
+            <button
+              onClick={() => setSelectedTypes([])}
+              className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
+            >
+              Clear type filters
+            </button>
+          )}
+        </div>
       </div>
 
-      {/* Infinite Scroll Sentinel and Loading Indicator */}
-      <div ref={loadMoreRef} className="flex justify-center py-8">
-        {isFetchingNextPage && (
-          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-            <LoadingSpinner size="sm" />
-            <span className="text-sm">Loading more Pokemon...</span>
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <LoadingSpinner size="lg" text="Loading Pokemon..." />
+        </div>
+      )}
+
+      {/* Error State */}
+      {isError && (
+        <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
+          <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
+            Error loading Pokemon
           </div>
-        )}
-        {!hasNextPage && allPokemon.length > 0 && (
-          <p className="text-gray-500 dark:text-gray-400 text-sm">
-            No more Pokemon to load
+          <p className="text-gray-600 dark:text-gray-400">
+            {error?.message || 'An unexpected error occurred'}
           </p>
-        )}
-      </div>
+        </div>
+      )}
+
+      {/* Pokemon Grid */}
+      {!isLoading && !isError && (
+        <>
+          {filteredPokemon.length === 0 ? (
+            <div className="flex justify-center items-center min-h-[400px]">
+              <p className="text-gray-600 dark:text-gray-400">
+                {searchQuery.trim()
+                  ? `No Pokemon found matching "${searchQuery}"`
+                  : 'No Pokemon found'}
+              </p>
+            </div>
+          ) : (
+            <>
+              <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                Showing {filteredPokemon.length} Pokemon
+                {searchQuery.trim() && ` matching "${searchQuery}"`}
+                {hasTypeFilter && ` of selected types`}
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
+                {filteredPokemon.map((pokemon) => (
+                  <PokemonCardWithData
+                    key={pokemon.name}
+                    url={pokemon.url}
+                    name={pokemon.name}
+                  />
+                ))}
+              </div>
+            </>
+          )}
+
+          {/* Infinite Scroll Sentinel and Loading Indicator (only when not type-filtering) */}
+          {!hasTypeFilter && (
+            <div ref={loadMoreRef} className="flex justify-center py-8">
+              {isFetchingNextPage && (
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-sm">Loading more Pokemon...</span>
+                </div>
+              )}
+              {!hasNextPage && filteredPokemon.length > 0 && (
+                <p className="text-gray-500 dark:text-gray-400 text-sm">
+                  No more Pokemon to load
+                </p>
+              )}
+            </div>
+          )}
+        </>
+      )}
     </div>
   );
 }

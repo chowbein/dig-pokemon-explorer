@@ -72,3 +72,15 @@ export interface PokemonListResponse {
   /** Array of Pokemon items for current page */
   results: PokemonListItem[];
 }
+
+/**
+ * Pokemon Type API Response
+ * Response from the type endpoint: https://pokeapi.co/api/v2/type/{id}/
+ */
+export interface PokemonTypeResponse {
+  /** Array of Pokemon with this type */
+  pokemon: Array<{
+    slot: number;
+    pokemon: PokemonListItem;
+  }>;
+}

@@ -3,7 +3,7 @@
  * Separates API calls from component logic for better architecture and testability.
  */
 
-import type { PokemonListResponse, Pokemon } from '../types/pokemon';
+import type { PokemonListResponse, Pokemon, PokemonTypeResponse, PokemonListItem } from '../types/pokemon';
 
 /** Base URL for the Pokemon API */
 const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
@@ -85,5 +85,42 @@ export async function fetchPokemon(url: string): Promise<Pokemon> {
       throw error;
     }
     throw new Error(`Unexpected error fetching Pokemon: ${String(error)}`);
+  }
+}
+
+/**
+ * Fetches all Pokemon of a specific type from the Pokemon API.
+ * 
+ * API Integration: https://pokeapi.co/api/v2/type/{type-name}/
+ * - Fetches all Pokemon that have the specified type
+ * - Returns Pokemon list items with name and URL
+ * 
+ * @param typeName - Pokemon type name (e.g., "fire", "water", "grass")
+ * @returns Promise<PokemonListItem[]> with all Pokemon of the specified type
+ */
+export async function fetchPokemonByType(typeName: string): Promise<PokemonListItem[]> {
+  try {
+    const url = `${POKEAPI_BASE_URL}/type/${typeName.toLowerCase()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch Pokemon by type: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: PokemonTypeResponse = await response.json();
+
+    // Extract Pokemon items from the type response
+    if (!data.pokemon || !Array.isArray(data.pokemon)) {
+      throw new Error('Invalid response format from Pokemon Type API');
+    }
+
+    return data.pokemon.map((entry) => entry.pokemon);
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Unexpected error fetching Pokemon by type: ${String(error)}`);
   }
 }
