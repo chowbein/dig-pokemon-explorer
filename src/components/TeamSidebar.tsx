@@ -68,24 +68,23 @@ export function TeamSidebar() {
 
   /**
    * Extracts counter types and navigates to filtered list.
-   * Counter types are types that resist or are immune to the weakness
-   * (types that the weakness deals half or no damage to).
+   * Counter types are types that are offensively strong against the weakness
+   * (types that deal double damage to the weakness).
+   * 
+   * Complex Logic: Queries the weakness type's API response and extracts double_damage_from
+   * to find types that deal 2x damage to the weakness type.
    */
   const extractAndNavigate = (
-    typeData: { damage_relations?: { half_damage_to?: Array<{ name: string }>; no_damage_to?: Array<{ name: string }> } },
+    typeData: { damage_relations?: { double_damage_from?: Array<{ name: string }> } },
     weaknessName: string
   ) => {
     if (!typeData?.damage_relations) return;
 
     const counterTypes = new Set<string>();
     
-    // Types that deal half damage to the weakness (resistant counters)
-    typeData.damage_relations.half_damage_to?.forEach((type: { name: string }) => {
-      counterTypes.add(type.name);
-    });
-
-    // Types that deal no damage to the weakness (immune counters)
-    typeData.damage_relations.no_damage_to?.forEach((type: { name: string }) => {
+    // Types that deal double damage to the weakness (offensively strong counters)
+    // API Integration: Extracts from damage_relations.double_damage_from array
+    typeData.damage_relations.double_damage_from?.forEach((type: { name: string }) => {
       counterTypes.add(type.name);
     });
 
