@@ -3,6 +3,8 @@
  * Displays Pokemon information in a card format with image, name, and types.
  */
 
+import { getTypeColors } from '../lib/pokemonTypeColors';
+
 interface PokemonCardProps {
   /** Pokemon name */
   name: string;
@@ -50,14 +52,19 @@ export function PokemonCard({ name, image, types }: PokemonCardProps) {
 
       {/* Pokemon Types */}
       <div className="flex flex-wrap gap-2 justify-center">
-        {types.map((type, index) => (
-          <span
-            key={index}
-            className="px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200"
-          >
-            {type.type.name}
-          </span>
-        ))}
+        {types.map((type, index) => {
+          const typeColors = getTypeColors(type.type.name);
+          const capitalizedType = type.type.name.charAt(0).toUpperCase() + type.type.name.slice(1);
+
+          return (
+            <span
+              key={index}
+              className={`px-3 py-1 text-xs font-medium rounded-full ${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark}`}
+            >
+              {capitalizedType}
+            </span>
+          );
+        })}
       </div>
     </div>
   );
