@@ -4,9 +4,13 @@
  */
 
 import { useParams, Link } from 'react-router-dom';
+import { useQuery, useQueries } from '@tanstack/react-query';
 import { usePokemonDetail, useEvolutionChain } from '../hooks/usePokemon';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { getTypeColors } from '../lib/pokemonTypeColors';
+import { getHabitatBackground } from '../lib/pokemonHabitats';
+import { getHabitatWithInference } from '../lib/habitatInference';
+import { fetchPokemonSpecies, fetchPokemonDetail } from '../services/api';
 import { useTeam } from '../context/TeamContext';
 
 /**
@@ -26,6 +30,32 @@ export function PokemonDetailPage() {
     isError: isErrorEvolution,
   } = useEvolutionChain(name || null);
   const { addPokemonToTeam, isTeamFull, isPokemonInTeam } = useTeam();
+
+  // Fetch species data for habitat
+  const { data: species } = useQuery({
+    queryKey: ['pokemon-species', name],
+    queryFn: () => fetchPokemonSpecies(name!),
+    enabled: !!name,
+    staleTime: Infinity,
+  });
+
+  // Fetch Pokemon data for each evolution to get types for habitat inference
+  const evolutionPokemonQueries = useQueries({
+    queries: (evolutionChain || []).map((evolution) => ({
+      queryKey: ['pokemon-detail-evolution', evolution.name],
+      queryFn: () => fetchPokemonDetail(evolution.name),
+      staleTime: 1000 * 60 * 10,
+    })),
+  });
+
+  // Fetch species data for each evolution to get habitat
+  const evolutionSpeciesQueries = useQueries({
+    queries: (evolutionChain || []).map((evolution) => ({
+      queryKey: ['pokemon-species-evolution', evolution.name],
+      queryFn: () => fetchPokemonSpecies(evolution.name),
+      staleTime: Infinity,
+    })),
+  });
 
   /**
    * Capitalizes the first letter of a string.
@@ -123,6 +153,20 @@ export function PokemonDetailPage() {
 
   const capitalizedName = capitalize(pokemon.name);
 
+  // Get habitat with inference
+  const apiHabitat = species?.habitat?.name as any;
+  const habitat = getHabitatWithInference(apiHabitat || null, pokemon.types);
+  const habitatConfig = getHabitatBackground(habitat);
+
+  // Build habitat background style
+  const habitatStyle = habitatConfig
+    ? {
+        backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.3), rgba(255, 255, 255, 0.3)), url('${habitatConfig.image}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : undefined;
+
   // Team management
   const isInTeam = isPokemonInTeam(pokemon.id);
   const canAddToTeam = !isTeamFull && !isInTeam;
@@ -158,7 +202,10 @@ export function PokemonDetailPage() {
         <div className="lg:col-span-1 flex flex-col gap-8">
           <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 border border-gray-200 dark:border-gray-700 text-center">
             {/* Pokemon Image */}
-            <div className="mb-4">
+            <div 
+              className={`mb-4 rounded-lg ${habitatConfig ? '' : 'bg-gray-100 dark:bg-gray-700'}`}
+              style={habitatStyle}
+            >
               {imageUrl ? (
                 <img
                   src={imageUrl}
@@ -166,7 +213,7 @@ export function PokemonDetailPage() {
                   className="w-64 h-64 object-contain mx-auto"
                 />
               ) : (
-                <div className="w-64 h-64 bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center mx-auto">
+                <div className="w-64 h-64 flex items-center justify-center mx-auto">
                   <span className="text-gray-400 dark:text-gray-600">No image</span>
                 </div>
               )}
@@ -317,6 +364,30 @@ export function PokemonDetailPage() {
                   const isCurrentPokemon = evolution.name === pokemon.name;
                   const pokemonId = extractPokemonIdFromSpeciesUrl(evolution.speciesUrl);
                   const evolutionImageUrl = pokemonId ? getPokemonImageUrl(pokemonId) : null;
+                  
+                  // Get habitat for this evolution
+                  const evolutionPokemonData = evolutionPokemonQueries[index]?.data;
+                  const evolutionSpeciesData = evolutionSpeciesQueries[index]?.data;
+                  const evolutionApiHabitat = evolutionSpeciesData?.habitat?.name as any;
+                  const evolutionHabitat = evolutionPokemonData 
+                    ? getHabitatWithInference(evolutionApiHabitat || null, evolutionPokemonData.types)
+                    : null;
+                  const evolutionHabitatConfig = evolutionHabitat ? getHabitatBackground(evolutionHabitat) : null;
+                  
+                  const evolutionHabitatStyle = evolutionHabitatConfig
+                    ? {
+                        backgroundImage: `linear-gradient(rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.4)), url('${evolutionHabitatConfig.image}')`,
+                        backgroundSize: 'cover',
+                        backgroundPosition: 'center',
+                      }
+                    : undefined;
+                  
+                  // Get the NEXT evolution's method (not the current one's)
+                  const nextEvolution = evolutionChain[index + 1];
+                  const evolutionMethod = nextEvolution?.method && nextEvolution.method !== 'Base form' 
+                    ? nextEvolution.method 
+                    : null;
+                  
                   return (
                     <div key={index} className="flex items-center gap-2 md:gap-4">
                       {/* Evolution Pokemon Card */}
@@ -331,8 +402,13 @@ export function PokemonDetailPage() {
                         <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
                           {evolutionName}
                         </div>
-                        {/* Pokemon Image */}
-                        <div className="w-24 h-24 bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center mb-2">
+                        {/* Pokemon Image with Habitat Background */}
+                        <div 
+                          className={`w-24 h-24 rounded-lg flex items-center justify-center mb-2 ${
+                            evolutionHabitatConfig ? '' : 'bg-gray-100 dark:bg-gray-600'
+                          }`}
+                          style={evolutionHabitatStyle}
+                        >
                           {evolutionImageUrl ? (
                             <img
                               src={evolutionImageUrl}
@@ -351,7 +427,7 @@ export function PokemonDetailPage() {
                           </span>
                         )}
                       </Link>
-                      {/* Evolution Arrow */}
+                      {/* Evolution Arrow and Method */}
                       {index < evolutionChain.length - 1 && (
                         <div className="flex flex-col items-center gap-1">
                           <svg
@@ -367,9 +443,9 @@ export function PokemonDetailPage() {
                               d="M9 5l7 7-7 7"
                             />
                           </svg>
-                          {evolution.method && evolution.method !== 'Base form' && (
+                          {evolutionMethod && (
                             <span className="text-xs text-gray-600 dark:text-gray-400 text-center max-w-24">
-                              {evolution.method}
+                              {evolutionMethod}
                             </span>
                           )}
                         </div>
