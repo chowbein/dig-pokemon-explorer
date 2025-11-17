@@ -213,25 +213,25 @@ export function PokemonListPage() {
           Pokemon Explorer
         </h1>
         <div className="flex items-center gap-4">
-          {hasUrlTypesFilter && weaknessParam && (
-            <div className="flex items-center gap-3">
-              <div className="text-sm text-gray-600 dark:text-gray-400">
-                Showing counters for{' '}
-                <span className="font-semibold text-red-600 dark:text-red-400">
-                  {capitalize(weaknessParam)}
-                </span>{' '}
-                <span className="text-gray-500 dark:text-gray-500">
-                  ({urlTypes.map((type) => capitalize(type)).join(', ')})
-                </span>
-              </div>
-              <button
-                onClick={clearUrlFilter}
-                className="px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
-              >
-                Clear Filter
-              </button>
+        {hasUrlTypesFilter && weaknessParam && (
+          <div className="flex items-center gap-3">
+            <div className="text-sm text-gray-600 dark:text-gray-400">
+              Showing counters for{' '}
+              <span className="font-semibold text-red-600 dark:text-red-400">
+                {capitalize(weaknessParam)}
+              </span>{' '}
+              <span className="text-gray-500 dark:text-gray-500">
+                ({urlTypes.map((type) => capitalize(type)).join(', ')})
+              </span>
             </div>
-          )}
+            <button
+              onClick={clearUrlFilter}
+              className="px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
+            >
+              Clear Filter
+            </button>
+          </div>
+        )}
           <button
             onClick={() => setFiltersVisible(!filtersVisible)}
             className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
@@ -256,90 +256,90 @@ export function PokemonListPage() {
         </div>
 
         <div className={`${filtersVisible ? 'lg:col-span-3' : 'lg:col-span-4'} lg:order-first`}>
-          {/* Loading State */}
-          {isLoading && (
-            <div className="flex justify-center items-center min-h-[400px]">
-              <LoadingSpinner size="lg" text="Loading Pokemon..." />
-            </div>
-          )}
+      {/* Loading State */}
+      {isLoading && (
+        <div className="flex justify-center items-center min-h-[400px]">
+          <LoadingSpinner size="lg" text="Loading Pokemon..." />
+        </div>
+      )}
 
-          {/* Error State */}
-          {isError && (
-            <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
-              <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
-                Error loading Pokemon
-              </div>
+      {/* Error State */}
+      {isError && (
+        <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
+          <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
+            Error loading Pokemon
+          </div>
+          <p className="text-gray-600 dark:text-gray-400">
+            {error?.message || 'An unexpected error occurred'}
+          </p>
+        </div>
+      )}
+
+      {/* Pokemon Grid */}
+      {!isLoading && !isError && (
+        <>
+          {filteredPokemon.length === 0 ? (
+            <div className="flex justify-center items-center min-h-[400px]">
               <p className="text-gray-600 dark:text-gray-400">
-                {error?.message || 'An unexpected error occurred'}
+                {searchQuery.trim()
+                  ? `No Pokemon found matching "${searchQuery}"`
+                  : 'No Pokemon found'}
               </p>
             </div>
-          )}
-
-          {/* Pokemon Grid */}
-          {!isLoading && !isError && (
+          ) : (
             <>
-              {filteredPokemon.length === 0 ? (
-                <div className="flex justify-center items-center min-h-[400px]">
-                  <p className="text-gray-600 dark:text-gray-400">
-                    {searchQuery.trim()
-                      ? `No Pokemon found matching "${searchQuery}"`
-                      : 'No Pokemon found'}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                    Showing {displayedPokemon.length} of {filteredPokemon.length} Pokemon
-                    {searchQuery.trim() && ` matching "${searchQuery}"`}
-                    {hasTypeFilter && ` of selected types`}
-                  </div>
+              <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                Showing {displayedPokemon.length} of {filteredPokemon.length} Pokemon
+                {searchQuery.trim() && ` matching "${searchQuery}"`}
+                {hasTypeFilter && ` of selected types`}
+              </div>
                   <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${filtersVisible ? 'xl:grid-cols-4' : 'lg:grid-cols-4 xl:grid-cols-5'} gap-6 mb-8`}>
-                    {displayedPokemon.map((pokemon) => (
-                      <PokemonCardWithData
-                        key={pokemon.name}
-                        url={pokemon.url}
-                        name={pokemon.name}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-
-              {/* Infinite Scroll Sentinel and Loading Indicator */}
-              <div ref={loadMoreRef} className="flex justify-center py-8">
-                {(hasTypeFilter || hasUrlTypesFilter) ? (
-                  // For filtered results, show "loading more" when there are more to display
-                  hasMoreFiltered ? (
-                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                      <LoadingSpinner size="sm" />
-                      <span className="text-sm">Loading more Pokemon...</span>
-                    </div>
-                  ) : (
-                    displayedPokemon.length > 0 && (
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">
-                        All {filteredPokemon.length} Pokemon loaded
-                      </p>
-                    )
-                  )
-                ) : (
-                  // For unfiltered results, show API pagination status
-                  <>
-                    {isFetchingNextPage && (
-                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                        <LoadingSpinner size="sm" />
-                        <span className="text-sm">Loading more Pokemon...</span>
-                      </div>
-                    )}
-                    {!hasNextPage && displayedPokemon.length > 0 && (
-                      <p className="text-gray-500 dark:text-gray-400 text-sm">
-                        No more Pokemon to load
-                      </p>
-                    )}
-                  </>
-                )}
+                {displayedPokemon.map((pokemon) => (
+                  <PokemonCardWithData
+                    key={pokemon.name}
+                    url={pokemon.url}
+                    name={pokemon.name}
+                  />
+                ))}
               </div>
             </>
           )}
+
+          {/* Infinite Scroll Sentinel and Loading Indicator */}
+          <div ref={loadMoreRef} className="flex justify-center py-8">
+            {(hasTypeFilter || hasUrlTypesFilter) ? (
+              // For filtered results, show "loading more" when there are more to display
+              hasMoreFiltered ? (
+                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                  <LoadingSpinner size="sm" />
+                  <span className="text-sm">Loading more Pokemon...</span>
+                </div>
+              ) : (
+                displayedPokemon.length > 0 && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    All {filteredPokemon.length} Pokemon loaded
+                  </p>
+                )
+              )
+            ) : (
+              // For unfiltered results, show API pagination status
+              <>
+                {isFetchingNextPage && (
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <LoadingSpinner size="sm" />
+                    <span className="text-sm">Loading more Pokemon...</span>
+                  </div>
+                )}
+                {!hasNextPage && displayedPokemon.length > 0 && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No more Pokemon to load
+                  </p>
+                )}
+              </>
+            )}
+          </div>
+        </>
+      )}
         </div>
       </div>
     </div>

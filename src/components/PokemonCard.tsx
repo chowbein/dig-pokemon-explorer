@@ -70,6 +70,7 @@ export function PokemonCard({ name, image, types, compact = false, habitat = nul
             src={image}
             alt={name}
             className="max-h-full max-w-full object-contain"
+            draggable={false}
           />
         ) : (
           <span className="text-gray-400 dark:text-gray-600">No image</span>
