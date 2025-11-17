@@ -80,12 +80,10 @@ export function PokemonDetailPage() {
    * Returns different colors based on stat ranges.
    */
   const getStatBarColor = (value: number): string => {
-    if (value >= 150) return 'bg-red-500';
-    if (value >= 120) return 'bg-orange-500';
+    if (value >= 120) return 'bg-green-500';
     if (value >= 90) return 'bg-yellow-500';
-    if (value >= 60) return 'bg-green-500';
-    if (value >= 30) return 'bg-blue-500';
-    return 'bg-gray-400';
+    if (value >= 60) return 'bg-orange-500';
+    return 'bg-red-500';
   };
 
   /**
@@ -355,7 +353,7 @@ export function PokemonDetailPage() {
                 No evolution chain available
               </p>
             ) : (
-              <div className="flex flex-wrap items-center justify-center gap-4 md:gap-6">
+              <div className="flex flex-wrap items-center justify-center gap-4">
                 {evolutionChain.map((evolution, index) => {
                   const evolutionName = evolution.name
                     .split('-')

@@ -8,8 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useInfinitePokemon, usePokemonByTypes, useFilteredPokemonByType } from '../hooks/usePokemon';
 import { PokemonCardWithData } from '../components/PokemonCardWithData';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
-import { POKEMON_TYPES } from '../lib/pokemonTypes';
-import { getTypeColors } from '../lib/pokemonTypeColors';
+import { FilterPanel } from '../components/FilterPanel';
 import type { PokemonListItem } from '../types/pokemon';
 
 /**
@@ -31,6 +30,7 @@ export function PokemonListPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [displayCount, setDisplayCount] = useState(20); // For paginating filtered results
+  const [filtersVisible, setFiltersVisible] = useState(true);
 
   // Read types and weakness from URL search parameter
   // API Integration: Reads counter types and weakness from URL query string (?types=water,rock&weakness=fire)
@@ -212,170 +212,136 @@ export function PokemonListPage() {
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
           Pokemon Explorer
         </h1>
-        {hasUrlTypesFilter && weaknessParam && (
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing counters for{' '}
-              <span className="font-semibold text-red-600 dark:text-red-400">
-                {capitalize(weaknessParam)}
-              </span>{' '}
-              <span className="text-gray-500 dark:text-gray-500">
-                ({urlTypes.map((type) => capitalize(type)).join(', ')})
-              </span>
+        <div className="flex items-center gap-4">
+          {hasUrlTypesFilter && weaknessParam && (
+            <div className="flex items-center gap-3">
+              <div className="text-sm text-gray-600 dark:text-gray-400">
+                Showing counters for{' '}
+                <span className="font-semibold text-red-600 dark:text-red-400">
+                  {capitalize(weaknessParam)}
+                </span>{' '}
+                <span className="text-gray-500 dark:text-gray-500">
+                  ({urlTypes.map((type) => capitalize(type)).join(', ')})
+                </span>
+              </div>
+              <button
+                onClick={clearUrlFilter}
+                className="px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
+              >
+                Clear Filter
+              </button>
             </div>
-            <button
-              onClick={clearUrlFilter}
-              className="px-4 py-2 text-sm font-medium bg-gray-200 hover:bg-gray-300 dark:bg-gray-700 dark:hover:bg-gray-600 text-gray-800 dark:text-gray-200 rounded-lg transition-colors"
-            >
-              Clear Filter
-            </button>
-          </div>
-        )}
+          )}
+          <button
+            onClick={() => setFiltersVisible(!filtersVisible)}
+            className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <svg className="w-5 h-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+            </svg>
+            <span>{filtersVisible ? 'Hide' : 'Show'} Filters</span>
+          </button>
+        </div>
       </div>
 
-      {/* Filters Section */}
-      <div className="mb-8 space-y-4">
-        {/* Name Search Input */}
-        <div>
-          <label htmlFor="search" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Search by Name
-          </label>
-          <input
-            id="search"
-            type="text"
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search Pokemon by name..."
-            className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
+        <div className={`lg:col-span-1 lg:order-last ${filtersVisible ? 'block' : 'hidden'}`}>
+          <FilterPanel
+            searchQuery={searchQuery}
+            setSearchQuery={setSearchQuery}
+            selectedTypes={selectedTypes}
+            toggleType={toggleType}
+            clearTypeFilters={() => setSelectedTypes([])}
           />
         </div>
 
-        {/* Type Filter Checkboxes */}
-        <div>
-          <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-            Filter by Type (select multiple)
-          </label>
-          <div className="flex flex-wrap gap-2 p-3 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 max-h-48 overflow-y-auto">
-            {POKEMON_TYPES.map((type) => {
-              const isSelected = selectedTypes.includes(type);
-              const typeColors = getTypeColors(type);
-              const capitalizedType = type.charAt(0).toUpperCase() + type.slice(1);
-
-              return (
-                <label
-                  key={type}
-                  className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium cursor-pointer transition-all ${
-                    isSelected
-                      ? `${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark} ring-2 ring-offset-2 ring-blue-500`
-                      : 'bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                  }`}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleType(type)}
-                    className="sr-only"
-                  />
-                  {capitalizedType}
-                </label>
-              );
-            })}
-          </div>
-          {selectedTypes.length > 0 && (
-            <button
-              onClick={() => setSelectedTypes([])}
-              className="mt-2 text-sm text-blue-600 dark:text-blue-400 hover:underline"
-            >
-              Clear type filters
-            </button>
-          )}
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {isLoading && (
-        <div className="flex justify-center items-center min-h-[400px]">
-          <LoadingSpinner size="lg" text="Loading Pokemon..." />
-        </div>
-      )}
-
-      {/* Error State */}
-      {isError && (
-        <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
-          <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
-            Error loading Pokemon
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {error?.message || 'An unexpected error occurred'}
-          </p>
-        </div>
-      )}
-
-      {/* Pokemon Grid */}
-      {!isLoading && !isError && (
-        <>
-          {filteredPokemon.length === 0 ? (
+        <div className={`${filtersVisible ? 'lg:col-span-3' : 'lg:col-span-4'} lg:order-first`}>
+          {/* Loading State */}
+          {isLoading && (
             <div className="flex justify-center items-center min-h-[400px]">
+              <LoadingSpinner size="lg" text="Loading Pokemon..." />
+            </div>
+          )}
+
+          {/* Error State */}
+          {isError && (
+            <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
+              <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
+                Error loading Pokemon
+              </div>
               <p className="text-gray-600 dark:text-gray-400">
-                {searchQuery.trim()
-                  ? `No Pokemon found matching "${searchQuery}"`
-                  : 'No Pokemon found'}
+                {error?.message || 'An unexpected error occurred'}
               </p>
             </div>
-          ) : (
+          )}
+
+          {/* Pokemon Grid */}
+          {!isLoading && !isError && (
             <>
-              <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Showing {displayedPokemon.length} of {filteredPokemon.length} Pokemon
-                {searchQuery.trim() && ` matching "${searchQuery}"`}
-                {hasTypeFilter && ` of selected types`}
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-                {displayedPokemon.map((pokemon) => (
-                  <PokemonCardWithData
-                    key={pokemon.name}
-                    url={pokemon.url}
-                    name={pokemon.name}
-                  />
-                ))}
+              {filteredPokemon.length === 0 ? (
+                <div className="flex justify-center items-center min-h-[400px]">
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {searchQuery.trim()
+                      ? `No Pokemon found matching "${searchQuery}"`
+                      : 'No Pokemon found'}
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
+                    Showing {displayedPokemon.length} of {filteredPokemon.length} Pokemon
+                    {searchQuery.trim() && ` matching "${searchQuery}"`}
+                    {hasTypeFilter && ` of selected types`}
+                  </div>
+                  <div className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 ${filtersVisible ? 'xl:grid-cols-4' : 'lg:grid-cols-4 xl:grid-cols-5'} gap-6 mb-8`}>
+                    {displayedPokemon.map((pokemon) => (
+                      <PokemonCardWithData
+                        key={pokemon.name}
+                        url={pokemon.url}
+                        name={pokemon.name}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+
+              {/* Infinite Scroll Sentinel and Loading Indicator */}
+              <div ref={loadMoreRef} className="flex justify-center py-8">
+                {(hasTypeFilter || hasUrlTypesFilter) ? (
+                  // For filtered results, show "loading more" when there are more to display
+                  hasMoreFiltered ? (
+                    <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                      <LoadingSpinner size="sm" />
+                      <span className="text-sm">Loading more Pokemon...</span>
+                    </div>
+                  ) : (
+                    displayedPokemon.length > 0 && (
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        All {filteredPokemon.length} Pokemon loaded
+                      </p>
+                    )
+                  )
+                ) : (
+                  // For unfiltered results, show API pagination status
+                  <>
+                    {isFetchingNextPage && (
+                      <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                        <LoadingSpinner size="sm" />
+                        <span className="text-sm">Loading more Pokemon...</span>
+                      </div>
+                    )}
+                    {!hasNextPage && displayedPokemon.length > 0 && (
+                      <p className="text-gray-500 dark:text-gray-400 text-sm">
+                        No more Pokemon to load
+                      </p>
+                    )}
+                  </>
+                )}
               </div>
             </>
           )}
-
-          {/* Infinite Scroll Sentinel and Loading Indicator */}
-          <div ref={loadMoreRef} className="flex justify-center py-8">
-            {(hasTypeFilter || hasUrlTypesFilter) ? (
-              // For filtered results, show "loading more" when there are more to display
-              hasMoreFiltered ? (
-                <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                  <LoadingSpinner size="sm" />
-                  <span className="text-sm">Loading more Pokemon...</span>
-                </div>
-              ) : (
-                displayedPokemon.length > 0 && (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    All {filteredPokemon.length} Pokemon loaded
-                  </p>
-                )
-              )
-            ) : (
-              // For unfiltered results, show API pagination status
-              <>
-                {isFetchingNextPage && (
-                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
-                    <LoadingSpinner size="sm" />
-                    <span className="text-sm">Loading more Pokemon...</span>
-                  </div>
-                )}
-                {!hasNextPage && displayedPokemon.length > 0 && (
-                  <p className="text-gray-500 dark:text-gray-400 text-sm">
-                    No more Pokemon to load
-                  </p>
-                )}
-              </>
-            )}
-          </div>
-        </>
-      )}
+        </div>
+      </div>
     </div>
   );
 }

@@ -37,11 +37,11 @@ export function PokemonCard({ name, image, types, compact = false, habitat = nul
   // Capitalize first letter of Pokemon name
   const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
 
-  const cardPadding = compact ? 'p-2' : 'p-4';
-  const imageHeight = compact ? 'h-20 mb-2' : 'h-40 mb-4';
+  const cardPadding = compact ? 'p-2' : 'p-3 md:p-4';
+  const imageHeight = compact ? 'h-20 mb-2' : 'h-32 md:h-40 mb-2 md:mb-4';
   const nameClasses = compact
     ? 'text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5 text-center'
-    : 'text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 text-center';
+    : 'text-base md:text-lg font-semibold text-gray-800 dark:text-gray-200 mb-2 md:mb-3 text-center';
 
   // Get habitat background configuration
   const habitatConfig = habitat ? getHabitatBackground(habitat) : null;
@@ -83,7 +83,7 @@ export function PokemonCard({ name, image, types, compact = false, habitat = nul
 
       {/* Pokemon Types */}
       <div
-        className={`flex flex-wrap ${compact ? 'gap-1' : 'gap-2'} justify-center ${
+        className={`flex flex-wrap ${compact ? 'gap-1' : 'gap-1 md:gap-2'} justify-center ${
           compact ? 'mt-0.5' : 'mt-auto'
         }`}
       >
@@ -94,7 +94,7 @@ export function PokemonCard({ name, image, types, compact = false, habitat = nul
           return (
             <span
               key={index}
-              className={`${compact ? 'px-1.5 py-0.5 text-[8px]' : 'px-3 py-1 text-xs'} font-medium rounded-full ${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark}`}
+              className={`${compact ? 'px-1.5 py-0.5 text-[8px]' : 'px-2 py-0.5 md:px-3 md:py-1 text-[10px] md:text-xs'} font-medium rounded-full ${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark}`}
             >
               {capitalizedType}
             </span>
