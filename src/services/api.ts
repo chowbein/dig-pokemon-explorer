@@ -3,7 +3,15 @@
  * Separates API calls from component logic for better architecture and testability.
  */
 
-import type { PokemonListResponse, Pokemon, PokemonTypeResponse, PokemonListItem } from '../types/pokemon';
+import type {
+  PokemonListResponse,
+  Pokemon,
+  PokemonTypeResponse,
+  PokemonListItem,
+  PokemonSpecies,
+  EvolutionChainResponse,
+  EvolutionChainItem,
+} from '../types/pokemon';
 
 /** Base URL for the Pokemon API */
 const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
@@ -160,5 +168,124 @@ export async function fetchPokemonDetail(name: string): Promise<Pokemon> {
       throw error;
     }
     throw new Error(`Unexpected error fetching Pokemon detail: ${String(error)}`);
+  }
+}
+
+/**
+ * Fetches Pokemon species data from the Pokemon API.
+ * 
+ * API Integration: https://pokeapi.co/api/v2/pokemon-species/{name}
+ * - Fetches species data including evolution chain URL
+ * - Used to get evolution chain information
+ * 
+ * @param name - Pokemon name or ID
+ * @returns Promise<PokemonSpecies> with species data including evolution chain URL
+ */
+export async function fetchPokemonSpecies(name: string): Promise<PokemonSpecies> {
+  try {
+    const url = `${POKEAPI_BASE_URL}/pokemon-species/${name.toLowerCase()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch Pokemon species: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: PokemonSpecies = await response.json();
+
+    // Validate response structure
+    if (!data.name || !data.evolution_chain) {
+      throw new Error('Invalid response format from Pokemon Species API');
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Unexpected error fetching Pokemon species: ${String(error)}`);
+  }
+}
+
+/**
+ * Fetches evolution chain data from the Pokemon API.
+ * 
+ * API Integration: Uses evolution chain URL from Pokemon species
+ * - Fetches nested evolution chain structure
+ * - Returns flattened evolution chain items for easier display
+ * 
+ * @param evolutionChainUrl - Evolution chain URL from Pokemon species
+ * @returns Promise<EvolutionChainItem[]> with flattened evolution chain
+ */
+export async function fetchEvolutionChain(
+  evolutionChainUrl: string
+): Promise<EvolutionChainItem[]> {
+  try {
+    const response = await fetch(evolutionChainUrl);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch evolution chain: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: EvolutionChainResponse = await response.json();
+
+    // Flatten the nested evolution chain structure
+    const evolutionChain: EvolutionChainItem[] = [];
+
+    /**
+     * Recursively traverses the evolution chain tree to flatten it.
+     * Processes each evolution link and its evolves_to branches.
+     */
+    const traverseChain = (chain: EvolutionChainResponse['chain'], level: number = 0) => {
+      if (!chain) return;
+
+      // Get evolution details from the first evolution_detail entry
+      const evolutionDetail = chain.evolution_details?.[0];
+      const minLevel = evolutionDetail?.min_level || null;
+      const trigger = evolutionDetail?.trigger?.name || 'base';
+      const item = evolutionDetail?.item?.name || null;
+      const heldItem = evolutionDetail?.held_item?.name || null;
+      const timeOfDay = evolutionDetail?.time_of_day || null;
+
+      // Build method description
+      let method = '';
+      if (level === 0) {
+        method = 'Base form';
+      } else {
+        const methodParts: string[] = [];
+        if (minLevel) methodParts.push(`Level ${minLevel}`);
+        if (item) methodParts.push(`using ${item}`);
+        if (heldItem) methodParts.push(`holding ${heldItem}`);
+        if (timeOfDay) methodParts.push(`during ${timeOfDay}`);
+        if (trigger && trigger !== 'level-up') methodParts.push(trigger);
+        method = methodParts.join(' + ') || trigger || 'Evolve';
+      }
+
+      evolutionChain.push({
+        name: chain.species.name,
+        min_level: minLevel,
+        trigger: trigger,
+        method: method,
+      });
+
+      // Recursively process evolves_to (next evolution stage)
+      if (chain.evolves_to && chain.evolves_to.length > 0) {
+        chain.evolves_to.forEach((nextEvolution) => {
+          traverseChain(nextEvolution, level + 1);
+        });
+      }
+    };
+
+    traverseChain(data.chain);
+
+    return evolutionChain;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Unexpected error fetching evolution chain: ${String(error)}`);
   }
 }

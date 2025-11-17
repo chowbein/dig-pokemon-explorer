@@ -4,7 +4,7 @@
  */
 
 import { useParams, Link } from 'react-router-dom';
-import { usePokemonDetail } from '../hooks/usePokemon';
+import { usePokemonDetail, useEvolutionChain } from '../hooks/usePokemon';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 
@@ -19,6 +19,11 @@ import { getTypeColors } from '../lib/pokemonTypeColors';
 export function PokemonDetailPage() {
   const { name } = useParams<{ name: string }>();
   const { data: pokemon, isLoading, isError, error } = usePokemonDetail(name || '');
+  const {
+    data: evolutionChain,
+    isLoading: isLoadingEvolution,
+    isError: isErrorEvolution,
+  } = useEvolutionChain(name || null);
 
   /**
    * Capitalizes the first letter of a string.
@@ -223,6 +228,85 @@ export function PokemonDetailPage() {
             );
           })}
         </div>
+      </div>
+
+      {/* Evolution Chain Section */}
+      <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-6 mb-6 border border-gray-200 dark:border-gray-700">
+        <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-200 mb-4">
+          Evolution Chain
+        </h2>
+        {isLoadingEvolution ? (
+          <div className="flex justify-center py-8">
+            <LoadingSpinner size="sm" text="Loading evolution chain..." />
+          </div>
+        ) : isErrorEvolution || !evolutionChain || evolutionChain.length === 0 ? (
+          <p className="text-gray-600 dark:text-gray-400">
+            No evolution chain available
+          </p>
+        ) : (
+          <div className="flex flex-wrap items-center gap-4 md:gap-6">
+            {evolutionChain.map((evolution, index) => {
+              const evolutionName = evolution.name
+                .split('-')
+                .map((word) => capitalize(word))
+                .join(' ');
+              const isCurrentPokemon = evolution.name === pokemon.name;
+
+              return (
+                <div key={index} className="flex items-center gap-2 md:gap-4">
+                  {/* Evolution Pokemon Card */}
+                  <Link
+                    to={`/pokemon/${evolution.name}`}
+                    className={`flex flex-col items-center p-4 rounded-lg border-2 transition-all ${
+                      isCurrentPokemon
+                        ? 'border-blue-500 bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-500 ring-offset-2'
+                        : 'border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700/50 hover:border-blue-400 hover:bg-blue-50 dark:hover:bg-blue-900/20'
+                    }`}
+                  >
+                    <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
+                      {evolutionName}
+                    </div>
+                    {/* Pokemon Image Placeholder - Would need to fetch each Pokemon's sprite */}
+                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-600 rounded flex items-center justify-center">
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        #{evolution.name}
+                      </span>
+                    </div>
+                    {isCurrentPokemon && (
+                      <span className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+                        Current
+                      </span>
+                    )}
+                  </Link>
+
+                  {/* Evolution Arrow */}
+                  {index < evolutionChain.length - 1 && (
+                    <div className="flex flex-col items-center gap-1">
+                      <svg
+                        className="w-6 h-6 text-gray-400 dark:text-gray-500"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                      {evolution.method && evolution.method !== 'Base form' && (
+                        <span className="text-xs text-gray-600 dark:text-gray-400 text-center max-w-24">
+                          {evolution.method}
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* Moves Section */}

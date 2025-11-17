@@ -4,8 +4,15 @@
  */
 
 import { useInfiniteQuery, useQuery, useQueries } from '@tanstack/react-query';
-import { fetchPokemonList, fetchPokemon, fetchPokemonByType, fetchPokemonDetail } from '../services/api';
-import type { PokemonListResponse, Pokemon, PokemonListItem } from '../types/pokemon';
+import {
+  fetchPokemonList,
+  fetchPokemon,
+  fetchPokemonByType,
+  fetchPokemonDetail,
+  fetchPokemonSpecies,
+  fetchEvolutionChain,
+} from '../services/api';
+import type { PokemonListResponse, Pokemon, PokemonListItem, EvolutionChainItem } from '../types/pokemon';
 
 /**
  * Custom hook for infinite scrolling Pokemon list.
@@ -138,4 +145,41 @@ export function usePokemonDetail(name: string) {
     enabled: !!name, // Only fetch if name is provided
     staleTime: 1000 * 60 * 10, // 10 minutes (Pokemon data doesn't change often)
   });
+}
+
+/**
+ * Custom hook for fetching Pokemon evolution chain.
+ * Uses React Query to fetch species data first, then evolution chain.
+ * 
+ * - Fetches Pokemon species to get evolution chain URL
+ * - Fetches evolution chain data
+ * - Returns flattened evolution chain items
+ * - Automatically caches results
+ * 
+ * @param pokemonName - Pokemon name or ID
+ * @returns React Query query object with evolution chain data
+ */
+export function useEvolutionChain(pokemonName: string | null) {
+  // First fetch species to get evolution chain URL
+  const speciesQuery = useQuery({
+    queryKey: ['pokemon-species', pokemonName],
+    queryFn: () => fetchPokemonSpecies(pokemonName!),
+    enabled: !!pokemonName,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+
+  // Then fetch evolution chain using the URL from species
+  const evolutionChainQuery = useQuery<EvolutionChainItem[], Error>({
+    queryKey: ['evolution-chain', speciesQuery.data?.evolution_chain.url],
+    queryFn: () => fetchEvolutionChain(speciesQuery.data!.evolution_chain.url),
+    enabled: !!speciesQuery.data?.evolution_chain.url,
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+
+  return {
+    data: evolutionChainQuery.data,
+    isLoading: speciesQuery.isLoading || evolutionChainQuery.isLoading,
+    isError: speciesQuery.isError || evolutionChainQuery.isError,
+    error: speciesQuery.error || evolutionChainQuery.error,
+  };
 }

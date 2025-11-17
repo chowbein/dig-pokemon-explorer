@@ -137,3 +137,72 @@ export interface PokemonTypeResponse {
     pokemon: PokemonListItem;
   }>;
 }
+
+/**
+ * Pokemon Species
+ * Species data from the Pokemon API species endpoint.
+ */
+export interface PokemonSpecies {
+  /** Pokemon species name */
+  name: string;
+  /** Evolution chain URL */
+  evolution_chain: {
+    url: string;
+  };
+}
+
+/**
+ * Evolution Chain Link
+ * Represents a Pokemon in the evolution chain.
+ */
+export interface EvolutionChainLink {
+  /** Species information */
+  species: {
+    name: string;
+    url: string;
+  };
+  /** Evolution details (how to evolve) */
+  evolution_details: Array<{
+    min_level: number | null;
+    trigger: {
+      name: string;
+      url: string;
+    };
+    item: {
+      name: string;
+      url: string;
+    } | null;
+    held_item: {
+      name: string;
+      url: string;
+    } | null;
+    time_of_day: string | null;
+    gender: number | null;
+  }>;
+  /** Pokemon this evolves into */
+  evolves_to: EvolutionChainLink[];
+}
+
+/**
+ * Evolution Chain Response
+ * Response from the evolution chain endpoint.
+ */
+export interface EvolutionChainResponse {
+  id: number;
+  chain: EvolutionChainLink;
+}
+
+/**
+ * Flattened Evolution Chain Item
+ * Simplified evolution chain item for display.
+ */
+export interface EvolutionChainItem {
+  /** Pokemon name */
+  name: string;
+  /** Evolution level (if applicable) */
+  min_level: number | null;
+  /** Evolution trigger name */
+  trigger: string;
+  /** Evolution method details */
+  method: string;
+}
