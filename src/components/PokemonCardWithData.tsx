@@ -71,6 +71,7 @@ export function PokemonCardWithData({ url, name }: PokemonCardWithDataProps) {
 
   /**
    * Handles drag start event.
+   * Creates a custom drag preview using the entire card element.
    * Stores Pokemon data in dataTransfer for drop handling.
    * Prevents dragging if Pokemon is already in team or team is full.
    */
@@ -96,29 +97,50 @@ export function PokemonCardWithData({ url, name }: PokemonCardWithDataProps) {
     // Store Pokemon data as JSON in dataTransfer
     e.dataTransfer.setData('application/json', JSON.stringify(pokemonData));
     e.dataTransfer.effectAllowed = 'move';
+
+    // Create a drag image from the entire card
+    const dragElement = e.currentTarget.cloneNode(true) as HTMLElement;
+    dragElement.style.position = 'absolute';
+    dragElement.style.top = '-9999px';
+    dragElement.style.width = e.currentTarget.offsetWidth + 'px';
+    dragElement.style.opacity = '0.8';
+    dragElement.style.transform = 'rotate(3deg)';
+    document.body.appendChild(dragElement);
+    
+    e.dataTransfer.setDragImage(dragElement, e.currentTarget.offsetWidth / 2, e.currentTarget.offsetHeight / 2);
+    
+    // Clean up the temporary element after a short delay
+    setTimeout(() => {
+      document.body.removeChild(dragElement);
+    }, 0);
     
     // Add visual feedback during drag
     if (e.currentTarget) {
-      e.currentTarget.style.opacity = '0.5';
+      e.currentTarget.style.opacity = '0.4';
+      e.currentTarget.style.transform = 'scale(0.95)';
     }
   };
 
   /**
    * Handles drag end event.
-   * Restores card opacity after drag completes.
+   * Restores card appearance after drag completes.
    */
   const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
     if (e.currentTarget) {
       e.currentTarget.style.opacity = '1';
+      e.currentTarget.style.transform = 'scale(1)';
     }
   };
 
+  // Check if dragging is disabled
+  const isDraggable = !isPokemonInTeam(pokemon.id) && !isTeamFull;
+
   return (
     <div
-      draggable={true}
+      draggable={isDraggable}
       onDragStart={handleDragStart}
       onDragEnd={handleDragEnd}
-      className="cursor-grab active:cursor-grabbing"
+      className={`transition-all ${isDraggable ? 'cursor-grab active:cursor-grabbing' : 'cursor-default'}`}
     >
       <PokemonCard
         name={pokemon.name}

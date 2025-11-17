@@ -31,7 +31,6 @@ import type { HabitatName } from '../lib/pokemonHabitats';
  */
 export function TeamSidebar() {
   const { team, removePokemonFromTeam, addPokemonToTeam, isTeamFull, isPokemonInTeam } = useTeam();
-  const [draggedOverSlot, setDraggedOverSlot] = useState<number | null>(null);
   const [isDraggingOverTeam, setIsDraggingOverTeam] = useState(false);
   const [loadingWeakness, setLoadingWeakness] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -144,32 +143,13 @@ export function TeamSidebar() {
   });
 
   /**
-   * Handles drag over event on a slot.
-   * Prevents default to allow drop and provides visual feedback.
-   */
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, slotIndex: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDraggedOverSlot(slotIndex);
-  };
-
-  /**
-   * Handles drag leave event.
-   * Removes visual feedback when dragging leaves the slot.
-   */
-  const handleDragLeave = () => {
-    setDraggedOverSlot(null);
-  };
-
-  /**
-   * Handles drop event on a slot or team area.
+   * Handles drop event on the team area.
    * Extracts Pokemon data from dataTransfer and adds to team.
-   * Automatically finds the next available slot if dropped anywhere in team area.
+   * Automatically finds the next available slot.
    */
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, _slotIndex?: number) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
     e.preventDefault();
     e.stopPropagation();
-    setDraggedOverSlot(null);
     setIsDraggingOverTeam(false);
 
     try {
@@ -211,6 +191,8 @@ export function TeamSidebar() {
     if (!isTeamFull) {
       e.dataTransfer.dropEffect = 'move';
       setIsDraggingOverTeam(true);
+    } else {
+      e.dataTransfer.dropEffect = 'none';
     }
   };
 
@@ -233,7 +215,6 @@ export function TeamSidebar() {
       y > rect.bottom
     ) {
       setIsDraggingOverTeam(false);
-      setDraggedOverSlot(null);
     }
   };
 
@@ -266,27 +247,9 @@ export function TeamSidebar() {
               key={index}
               className={`relative rounded-lg transition-all h-full min-h-[160px] ${
                 !pokemon
-                  ? draggedOverSlot === index || (isDraggingOverTeam && !isTeamFull)
-                    ? 'border-2 border-blue-500 dark:border-blue-400 bg-blue-100/60 dark:bg-blue-900/30'
-                    : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50'
+                  ? 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50'
                   : ''
               }`}
-              onDragOver={(e) => {
-                e.stopPropagation();
-                if (!pokemon) {
-                  handleDragOver(e, index);
-                }
-              }}
-              onDragLeave={(e) => {
-                e.stopPropagation();
-                handleDragLeave();
-              }}
-              onDrop={(e) => {
-                e.stopPropagation();
-                if (!pokemon) {
-                  handleDrop(e, index);
-                }
-              }}
             >
               {pokemon ? (
                 <div className="relative h-full">
