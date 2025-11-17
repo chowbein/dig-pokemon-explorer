@@ -3,6 +3,7 @@
  * Displays a paginated grid of Pokemon cards with infinite scroll functionality.
  */
 
+import { useEffect, useRef } from 'react';
 import { useInfinitePokemon } from '../hooks/usePokemon';
 import { PokemonCardWithData } from '../components/PokemonCardWithData';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
@@ -10,13 +11,13 @@ import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 /**
  * Pokemon list page with infinite scrolling.
  * Uses useInfinitePokemon hook to fetch paginated Pokemon data.
- * Displays Pokemon cards in a grid layout with load more functionality.
+ * Displays Pokemon cards in a grid layout with infinite scroll functionality.
  * 
  * - Shows loading spinner during initial fetch
  * - Displays error message if fetch fails
  * - Maps over all pages to render Pokemon cards
  * - Each card fetches its own data (N+1 query pattern) for complete Pokemon info
- * - Load More button fetches next page and disables during fetch or when no more pages
+ * - Automatically fetches next page when user scrolls to bottom (infinite scroll)
  */
 export function PokemonListPage() {
   const {
@@ -28,6 +29,37 @@ export function PokemonListPage() {
     hasNextPage,
     isFetchingNextPage,
   } = useInfinitePokemon();
+
+  // Ref for the sentinel element that triggers infinite scroll
+  const loadMoreRef = useRef<HTMLDivElement>(null);
+
+  // Intersection Observer to detect when user reaches bottom
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        // If sentinel is visible, has next page, and not currently fetching, load more
+        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
+          fetchNextPage();
+        }
+      },
+      {
+        root: null, // Use viewport as root
+        rootMargin: '100px', // Trigger 100px before reaching bottom
+        threshold: 0.1,
+      }
+    );
+
+    const currentRef = loadMoreRef.current;
+    if (currentRef) {
+      observer.observe(currentRef);
+    }
+
+    return () => {
+      if (currentRef) {
+        observer.unobserve(currentRef);
+      }
+    };
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
 
   if (isLoading) {
@@ -79,29 +111,20 @@ export function PokemonListPage() {
         ))}
       </div>
 
-      {/* Load More Button */}
-      {hasNextPage && (
-        <div className="flex justify-center mb-8">
-          <button
-            onClick={() => fetchNextPage()}
-            disabled={isFetchingNextPage}
-            className={`px-6 py-3 rounded-lg font-semibold transition-colors flex items-center gap-2 ${
-              isFetchingNextPage
-                ? 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
-                : 'bg-blue-600 hover:bg-blue-700 text-white'
-            }`}
-          >
-          {isFetchingNextPage ? (
-            <>
-              <div className="w-4 h-4 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-              <span>Loading...</span>
-            </>
-          ) : (
-            'Load More'
-          )}
-          </button>
-        </div>
-      )}
+      {/* Infinite Scroll Sentinel and Loading Indicator */}
+      <div ref={loadMoreRef} className="flex justify-center py-8">
+        {isFetchingNextPage && (
+          <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+            <LoadingSpinner size="sm" />
+            <span className="text-sm">Loading more Pokemon...</span>
+          </div>
+        )}
+        {!hasNextPage && allPokemon.length > 0 && (
+          <p className="text-gray-500 dark:text-gray-400 text-sm">
+            No more Pokemon to load
+          </p>
+        )}
+      </div>
     </div>
   );
 }
