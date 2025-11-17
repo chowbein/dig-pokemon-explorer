@@ -12,6 +12,7 @@ import { useTeamTypeAnalysis } from '../hooks/useTeamTypeAnalysis';
 import { TeamSummary } from './TeamSummary';
 import { PokemonCard } from './PokemonCard';
 import { getTypeColors } from '../lib/pokemonTypeColors';
+import { getHabitatWithInference } from '../lib/habitatInference';
 import type { TeamPokemon } from '../context/TeamContext';
 import type { HabitatName } from '../lib/pokemonHabitats';
 
@@ -74,15 +75,20 @@ export function TeamSidebar() {
   }, [pokemonQueries, team]);
 
   const speciesMap = useMemo(() => {
-    const map = new Map<number, HabitatName | null>();
+    const map = new Map<number, HabitatName>();
     team.forEach((teamPokemon, index) => {
       const species = speciesQueries[index]?.data;
-      if (teamPokemon && species) {
-        map.set(teamPokemon.id, (species.habitat?.name as HabitatName) || null);
+      const pokemonDetail = pokemonQueries[index]?.data;
+      
+      if (teamPokemon && pokemonDetail) {
+        const apiHabitat = species?.habitat?.name as HabitatName | null;
+        // Always use inference to get a habitat (uses API habitat if available)
+        const inferredHabitat = getHabitatWithInference(apiHabitat || null, pokemonDetail.types);
+        map.set(teamPokemon.id, inferredHabitat);
       }
     });
     return map;
-  }, [speciesQueries, team]);
+  }, [speciesQueries, pokemonQueries, team]);
 
   // Use custom hook for team type analysis
   // API Integration: Fetches type data from PokeAPI and aggregates weaknesses/resistances
@@ -240,7 +246,8 @@ export function TeamSidebar() {
               pokemonDetails.sprites.front_default ||
               null
             : pokemon?.imageUrl ?? null;
-          const habitat = pokemon ? speciesMap.get(pokemon.id) : null;
+          // Habitat is already inferred in speciesMap (undefined if not loaded yet)
+          const habitat = pokemon ? (speciesMap.get(pokemon.id) || null) : null;
 
           return (
             <div

@@ -121,8 +121,17 @@ export function usePokemonByTypes(selectedTypes: string[]) {
     }
   }
 
+  // BUG FIX: Manually construct URL for filtered Pokemon
+  // The type API endpoint doesn't always return a URL, so we build it
+  const pokemonWithUrls = useMemo(() => {
+    return filteredPokemon.map((p) => ({
+      ...p,
+      url: `https://pokeapi.co/api/v2/pokemon/${p.name}`,
+    }));
+  }, [filteredPokemon]);
+
   return {
-    data: filteredPokemon,
+    data: pokemonWithUrls,
     isLoading,
     isError,
     error: errors.length > 0 ? errors[0] : null,
@@ -265,7 +274,11 @@ export function useFilteredPokemonByType(types: string[]) {
             const pokemonName = entry.pokemon.name;
             if (!seenNames.has(pokemonName)) {
               seenNames.add(pokemonName);
-              allPokemon.push(entry.pokemon);
+              // Manually construct the URL, as it might be missing
+              allPokemon.push({
+                name: pokemonName,
+                url: `https://pokeapi.co/api/v2/pokemon/${pokemonName}`,
+              });
             }
           });
         }

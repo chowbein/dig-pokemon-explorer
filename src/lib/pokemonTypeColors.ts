@@ -49,3 +49,39 @@ export function getTypeColors(typeName: string): {
   };
 }
 
+/**
+ * Gets CSS gradient background based on Pokemon type.
+ * Used as fallback when habitat background is not available.
+ * Returns a subtle gradient with low opacity overlay for text readability.
+ * 
+ * @param typeName - Pokemon type name (e.g., "fire", "water", "grass")
+ * @returns CSS gradient string with overlay for background styling
+ */
+export function getTypeBackgroundGradient(typeName: string): string {
+  const type = typeName.toLowerCase();
+
+  // Map each Pokemon type to a gradient (lighter to darker shade)
+  const typeGradientMap: Record<string, string> = {
+    normal: 'linear-gradient(135deg, #E5E7EB 0%, #9CA3AF 100%)',
+    fire: 'linear-gradient(135deg, #FCA5A5 0%, #DC2626 100%)',
+    water: 'linear-gradient(135deg, #93C5FD 0%, #2563EB 100%)',
+    electric: 'linear-gradient(135deg, #FDE047 0%, #CA8A04 100%)',
+    grass: 'linear-gradient(135deg, #86EFAC 0%, #16A34A 100%)',
+    ice: 'linear-gradient(135deg, #A5F3FC 0%, #0891B2 100%)',
+    fighting: 'linear-gradient(135deg, #FDBA74 0%, #EA580C 100%)',
+    poison: 'linear-gradient(135deg, #D8B4FE 0%, #9333EA 100%)',
+    ground: 'linear-gradient(135deg, #FCD34D 0%, #D97706 100%)',
+    flying: 'linear-gradient(135deg, #BAE6FD 0%, #0284C7 100%)',
+    psychic: 'linear-gradient(135deg, #FBCFE8 0%, #DB2777 100%)',
+    bug: 'linear-gradient(135deg, #D9F99D 0%, #65A30D 100%)',
+    rock: 'linear-gradient(135deg, #D6D3D1 0%, #78716C 100%)',
+    ghost: 'linear-gradient(135deg, #DDD6FE 0%, #7C3AED 100%)',
+    dragon: 'linear-gradient(135deg, #C7D2FE 0%, #4F46E5 100%)',
+    dark: 'linear-gradient(135deg, #6B7280 0%, #1F2937 100%)',
+    steel: 'linear-gradient(135deg, #CBD5E1 0%, #475569 100%)',
+    fairy: 'linear-gradient(135deg, #FECDD3 0%, #E11D48 100%)',
+  };
+
+  return typeGradientMap[type] || 'linear-gradient(135deg, #E5E7EB 0%, #9CA3AF 100%)';
+}
+

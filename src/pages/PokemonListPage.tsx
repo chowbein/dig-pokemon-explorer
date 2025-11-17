@@ -30,6 +30,7 @@ export function PokemonListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [displayCount, setDisplayCount] = useState(20); // For paginating filtered results
 
   // Read types and weakness from URL search parameter
   // API Integration: Reads counter types and weakness from URL query string (?types=water,rock&weakness=fire)
@@ -115,6 +116,25 @@ export function PokemonListPage() {
     );
   }, [basePokemon, searchQuery]);
 
+  // When filters change, reset display count to 20
+  useEffect(() => {
+    setDisplayCount(20);
+  }, [selectedTypes, urlTypes, searchQuery]);
+
+  // For filtered results, only display the first 'displayCount' Pokemon (client-side pagination)
+  // This makes filtered results behave like infinite scroll - 20 at a time
+  const displayedPokemon = useMemo(() => {
+    if (hasTypeFilter || hasUrlTypesFilter) {
+      // When filters are active, paginate the results
+      return filteredPokemon.slice(0, displayCount);
+    }
+    // When no filters, use all results (already paginated by infinite scroll)
+    return filteredPokemon;
+  }, [filteredPokemon, displayCount, hasTypeFilter, hasUrlTypesFilter]);
+
+  // Check if there are more filtered results to load
+  const hasMoreFiltered = filteredPokemon.length > displayCount;
+
   // Handle type checkbox toggle
   const toggleType = (type: string) => {
     setSelectedTypes((prev) =>
@@ -124,21 +144,25 @@ export function PokemonListPage() {
     );
   };
 
-  // Ref for the sentinel element that triggers infinite scroll (only when not type-filtering)
+  // Ref for the sentinel element that triggers infinite scroll
   const loadMoreRef = useRef<HTMLDivElement>(null);
 
-  // Intersection Observer to detect when user reaches bottom (only when not type-filtering)
+  // Intersection Observer to detect when user reaches bottom
   useEffect(() => {
-    // Disable infinite scroll when type filtering or URL filtering (type endpoint returns all results at once)
-    if (hasTypeFilter || hasUrlTypesFilter) {
-      return;
-    }
-
     const observer = new IntersectionObserver(
       (entries) => {
-        // If sentinel is visible, has next page, and not currently fetching, load more
-        if (entries[0].isIntersecting && hasNextPage && !isFetchingNextPage) {
-          fetchNextPage();
+        if (entries[0].isIntersecting) {
+          if (hasTypeFilter || hasUrlTypesFilter) {
+            // For filtered results, load more from client-side pagination
+            if (hasMoreFiltered) {
+              setDisplayCount((prev) => prev + 20);
+            }
+          } else {
+            // For unfiltered, use infinite scroll API pagination
+            if (hasNextPage && !isFetchingNextPage) {
+              fetchNextPage();
+            }
+          }
         }
       },
       {
@@ -158,7 +182,7 @@ export function PokemonListPage() {
         observer.unobserve(currentRef);
       }
     };
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage, hasTypeFilter, hasUrlTypesFilter]);
+  }, [hasNextPage, isFetchingNextPage, fetchNextPage, hasTypeFilter, hasUrlTypesFilter, hasMoreFiltered]);
 
 
   if (isLoading) {
@@ -301,12 +325,12 @@ export function PokemonListPage() {
           ) : (
             <>
               <div className="mb-4 text-sm text-gray-600 dark:text-gray-400">
-                Showing {filteredPokemon.length} Pokemon
+                Showing {displayedPokemon.length} of {filteredPokemon.length} Pokemon
                 {searchQuery.trim() && ` matching "${searchQuery}"`}
                 {hasTypeFilter && ` of selected types`}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 mb-8">
-                {filteredPokemon.map((pokemon) => (
+                {displayedPokemon.map((pokemon) => (
                   <PokemonCardWithData
                     key={pokemon.name}
                     url={pokemon.url}
@@ -317,22 +341,39 @@ export function PokemonListPage() {
             </>
           )}
 
-          {/* Infinite Scroll Sentinel and Loading Indicator (only when not type-filtering) */}
-          {!hasTypeFilter && (
-            <div ref={loadMoreRef} className="flex justify-center py-8">
-              {isFetchingNextPage && (
+          {/* Infinite Scroll Sentinel and Loading Indicator */}
+          <div ref={loadMoreRef} className="flex justify-center py-8">
+            {(hasTypeFilter || hasUrlTypesFilter) ? (
+              // For filtered results, show "loading more" when there are more to display
+              hasMoreFiltered ? (
                 <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
                   <LoadingSpinner size="sm" />
                   <span className="text-sm">Loading more Pokemon...</span>
                 </div>
-              )}
-              {!hasNextPage && filteredPokemon.length > 0 && (
-                <p className="text-gray-500 dark:text-gray-400 text-sm">
-                  No more Pokemon to load
-                </p>
-              )}
-            </div>
-          )}
+              ) : (
+                displayedPokemon.length > 0 && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    All {filteredPokemon.length} Pokemon loaded
+                  </p>
+                )
+              )
+            ) : (
+              // For unfiltered results, show API pagination status
+              <>
+                {isFetchingNextPage && (
+                  <div className="flex items-center gap-2 text-gray-600 dark:text-gray-400">
+                    <LoadingSpinner size="sm" />
+                    <span className="text-sm">Loading more Pokemon...</span>
+                  </div>
+                )}
+                {!hasNextPage && displayedPokemon.length > 0 && (
+                  <p className="text-gray-500 dark:text-gray-400 text-sm">
+                    No more Pokemon to load
+                  </p>
+                )}
+              </>
+            )}
+          </div>
         </>
       )}
     </div>
