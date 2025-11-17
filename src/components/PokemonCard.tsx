@@ -3,6 +3,7 @@
  * Displays Pokemon information in a card format with image, name, and types.
  */
 
+import { Link } from 'react-router-dom';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 
 interface PokemonCardProps {
@@ -21,6 +22,7 @@ interface PokemonCardProps {
 /**
  * Card component displaying Pokemon information.
  * Features hover effect for better interactivity.
+ * Wrapped with Link for navigation to Pokemon detail page.
  * 
  * @param name - Pokemon name (capitalized)
  * @param image - Image URL for Pokemon sprite/artwork
@@ -31,7 +33,10 @@ export function PokemonCard({ name, image, types }: PokemonCardProps) {
   const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:scale-105 transition-transform cursor-pointer border border-gray-200 dark:border-gray-700">
+    <Link
+      to={`/pokemon/${name}`}
+      className="block bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:scale-105 transition-transform cursor-pointer border border-gray-200 dark:border-gray-700 no-underline"
+    >
       {/* Pokemon Image */}
       <div className="flex justify-center items-center h-40 mb-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
         {image ? (
@@ -66,6 +71,6 @@ export function PokemonCard({ name, image, types }: PokemonCardProps) {
           );
         })}
       </div>
-    </div>
+    </Link>
   );
 }
