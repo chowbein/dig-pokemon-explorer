@@ -149,6 +149,11 @@ export interface PokemonSpecies {
   evolution_chain: {
     url: string;
   };
+  /** Habitat information */
+  habitat: {
+    name: string;
+    url: string;
+  } | null;
 }
 
 /**

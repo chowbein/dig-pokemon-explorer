@@ -3,10 +3,13 @@
  * Wrapper component that fetches individual Pokemon data and renders PokemonCard.
  */
 
+import { useQuery } from '@tanstack/react-query';
 import { usePokemon } from '../hooks/usePokemon';
 import { useTeam } from '../context/TeamContext';
 import { PokemonCard } from './PokemonCard';
 import { LoadingSpinner } from './ui/LoadingSpinner';
+import { fetchPokemonSpecies } from '../services/api';
+import type { HabitatName } from '../lib/pokemonHabitats';
 
 interface PokemonCardWithDataProps {
   /** Pokemon API URL from PokemonListItem */
@@ -33,6 +36,14 @@ export function PokemonCardWithData({ url, name }: PokemonCardWithDataProps) {
   const { data: pokemon, isLoading, isError } = usePokemon(url);
   const { isTeamFull, isPokemonInTeam } = useTeam();
 
+  // Fetch species data for habitat information
+  const { data: species } = useQuery({
+    queryKey: ['pokemon-species', name],
+    queryFn: () => fetchPokemonSpecies(name),
+    enabled: !!pokemon, // Only fetch when pokemon data is available
+    staleTime: 1000 * 60 * 10, // 10 minutes
+  });
+
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700 flex items-center justify-center h-64">
@@ -54,6 +65,9 @@ export function PokemonCardWithData({ url, name }: PokemonCardWithDataProps) {
     pokemon.sprites.other?.['official-artwork']?.front_default ||
     pokemon.sprites.front_default ||
     null;
+
+  // Extract habitat name from species data
+  const habitat = species?.habitat?.name as HabitatName | null || null;
 
   /**
    * Handles drag start event.
@@ -110,6 +124,7 @@ export function PokemonCardWithData({ url, name }: PokemonCardWithDataProps) {
         name={pokemon.name}
         image={imageUrl}
         types={pokemon.types}
+        habitat={habitat}
       />
     </div>
   );

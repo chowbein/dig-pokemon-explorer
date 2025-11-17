@@ -7,12 +7,13 @@ import { useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { useQueries } from '@tanstack/react-query';
-import { fetchPokemonDetail, fetchTypeData } from '../services/api';
+import { fetchPokemonDetail, fetchTypeData, fetchPokemonSpecies } from '../services/api';
 import { useTeamTypeAnalysis } from '../hooks/useTeamTypeAnalysis';
 import { TeamSummary } from './TeamSummary';
 import { PokemonCard } from './PokemonCard';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 import type { TeamPokemon } from '../context/TeamContext';
+import type { HabitatName } from '../lib/pokemonHabitats';
 
 /**
  * Team sidebar component displaying 6 Pokemon team slots.
@@ -45,6 +46,15 @@ export function TeamSidebar() {
     })),
   });
 
+  // Fetch species data for each team member (needed for habitat backgrounds)
+  const speciesQueries = useQueries({
+    queries: team.map((pokemon) => ({
+      queryKey: ['pokemon-species', pokemon.name],
+      queryFn: () => fetchPokemonSpecies(pokemon.name),
+      staleTime: 1000 * 60 * 10, // 10 minutes
+    })),
+  });
+
   // Prepare team data for type analysis hook
   // Complex Logic: Maps Pokemon query results to format expected by useTeamTypeAnalysis
   const teamWithTypes = useMemo(() => {
@@ -63,6 +73,17 @@ export function TeamSidebar() {
     });
     return map;
   }, [pokemonQueries, team]);
+
+  const speciesMap = useMemo(() => {
+    const map = new Map<number, HabitatName | null>();
+    team.forEach((teamPokemon, index) => {
+      const species = speciesQueries[index]?.data;
+      if (teamPokemon && species) {
+        map.set(teamPokemon.id, (species.habitat?.name as HabitatName) || null);
+      }
+    });
+    return map;
+  }, [speciesQueries, team]);
 
   // Use custom hook for team type analysis
   // API Integration: Fetches type data from PokeAPI and aggregates weaknesses/resistances
@@ -238,6 +259,7 @@ export function TeamSidebar() {
               pokemonDetails.sprites.front_default ||
               null
             : pokemon?.imageUrl ?? null;
+          const habitat = pokemon ? speciesMap.get(pokemon.id) : null;
 
           return (
             <div
@@ -273,6 +295,7 @@ export function TeamSidebar() {
                     image={imageUrl}
                     types={pokemonDetails?.types || []}
                     compact
+                    habitat={habitat}
                   />
                   <button
                     onClick={() => removePokemonFromTeam(pokemon.id)}
@@ -350,7 +373,7 @@ export function TeamSidebar() {
                                 {/* Weaknesses Column */}
                                 <td className="px-2 py-1.5 text-left">
                                   {weakness ? (
-                                    <div className="flex items-center gap-2">
+                                    <div className="flex items-center justify-between gap-2">
                                       <span
                                         className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${getTypeColors(weakness[0]).bg} ${getTypeColors(weakness[0]).text} dark:${getTypeColors(weakness[0]).bgDark} dark:${getTypeColors(weakness[0]).textDark}`}
                                         title={`${weakness[1]} team member${weakness[1] > 1 ? 's' : ''} weak to ${weakness[0]}`}
@@ -361,10 +384,20 @@ export function TeamSidebar() {
                                       <button
                                         onClick={() => handleFindCounter(weakness[0])}
                                         disabled={loadingWeakness === weakness[0]}
-                                        className="px-2 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded transition-colors whitespace-nowrap"
+                                        className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:text-blue-300 dark:hover:bg-blue-900/30 disabled:text-gray-400 disabled:cursor-not-allowed rounded transition-colors"
                                         title={`Find Pokemon that counter ${weakness[0]}`}
+                                        aria-label={`Filter counters for ${weakness[0]}`}
                                       >
-                                        {loadingWeakness === weakness[0] ? 'Finding...' : 'Counter'}
+                                        {loadingWeakness === weakness[0] ? (
+                                          <svg className="w-4 h-4 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                          </svg>
+                                        ) : (
+                                          <svg className="w-4 h-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591l-5.432 5.432a2.25 2.25 0 00-.659 1.591v2.927a2.25 2.25 0 01-1.244 2.013L9.75 21v-6.568a2.25 2.25 0 00-.659-1.591L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+                                          </svg>
+                                        )}
                                       </button>
                                     </div>
                                   ) : (

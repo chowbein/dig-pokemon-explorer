@@ -3,7 +3,8 @@
  * Manages user's Pokemon team with a maximum of 6 Pokemon.
  */
 
-import { createContext, useContext, useState, ReactNode } from 'react';
+import { createContext, useContext, useState } from 'react';
+import type { ReactNode } from 'react';
 
 /**
  * Team Pokemon Item

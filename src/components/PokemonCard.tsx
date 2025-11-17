@@ -5,6 +5,7 @@
 
 import { Link } from 'react-router-dom';
 import { getTypeColors } from '../lib/pokemonTypeColors';
+import { getHabitatBackground, type HabitatName } from '../lib/pokemonHabitats';
 
 interface PokemonCardProps {
   /** Pokemon name */
@@ -19,6 +20,8 @@ interface PokemonCardProps {
   }>;
   /** Optional compact variant for smaller displays */
   compact?: boolean;
+  /** Optional habitat for background image */
+  habitat?: HabitatName | null;
 }
 
 /**
@@ -30,7 +33,7 @@ interface PokemonCardProps {
  * @param image - Image URL for Pokemon sprite/artwork
  * @param types - Array of Pokemon types to display as badges
  */
-export function PokemonCard({ name, image, types, compact = false }: PokemonCardProps) {
+export function PokemonCard({ name, image, types, compact = false, habitat = null }: PokemonCardProps) {
   // Capitalize first letter of Pokemon name
   const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
 
@@ -40,13 +43,28 @@ export function PokemonCard({ name, image, types, compact = false }: PokemonCard
     ? 'text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5 text-center'
     : 'text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 text-center';
 
+  // Get habitat background configuration
+  const habitatConfig = habitat ? getHabitatBackground(habitat) : null;
+
+  // Build inline styles for habitat background (only for image container)
+  const habitatStyle = habitatConfig
+    ? {
+        backgroundImage: `linear-gradient(rgba(255, 255, 255, ${habitatConfig.overlayOpacity}), rgba(255, 255, 255, ${habitatConfig.overlayOpacity})), url('${habitatConfig.image}')`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+      }
+    : undefined;
+
   return (
     <Link
       to={`/pokemon/${name}`}
       className={`block bg-white dark:bg-gray-800 rounded-lg shadow-md ${cardPadding} hover:scale-105 transition-transform cursor-pointer border border-gray-200 dark:border-gray-700 no-underline h-full flex flex-col`}
     >
       {/* Pokemon Image */}
-      <div className={`flex justify-center items-center ${imageHeight} bg-gray-50 dark:bg-gray-900 rounded-lg`}>
+      <div 
+        className={`flex justify-center items-center ${imageHeight} ${habitatConfig ? '' : 'bg-gray-50 dark:bg-gray-900'} rounded-lg`}
+        style={habitatStyle}
+      >
         {image ? (
           <img
             src={image}
@@ -76,7 +94,7 @@ export function PokemonCard({ name, image, types, compact = false }: PokemonCard
           return (
             <span
               key={index}
-              className={`${compact ? 'px-1.5 py-0.5 text-[7px]' : 'px-3 py-1 text-xs'} font-medium rounded-full ${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark}`}
+              className={`${compact ? 'px-1.5 py-0.5 text-[8px]' : 'px-3 py-1 text-xs'} font-medium rounded-full ${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark}`}
             >
               {capitalizedType}
             </span>
