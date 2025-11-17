@@ -11,6 +11,7 @@ import type {
   PokemonSpecies,
   EvolutionChainResponse,
   EvolutionChainItem,
+  TypeDataResponse,
 } from '../types/pokemon';
 
 /** Base URL for the Pokemon API */
@@ -288,5 +289,42 @@ export async function fetchEvolutionChain(
       throw error;
     }
     throw new Error(`Unexpected error fetching evolution chain: ${String(error)}`);
+  }
+}
+
+/**
+ * Fetches type damage relations data from the Pokemon API.
+ * 
+ * API Integration: https://pokeapi.co/api/v2/type/{type_name}
+ * - Fetches type data including damage relations (weaknesses, resistances)
+ * - Used to calculate team weaknesses and resistances
+ * 
+ * @param typeName - Pokemon type name (e.g., "fire", "water", "grass")
+ * @returns Promise<TypeDataResponse> with type data including damage relations
+ */
+export async function fetchTypeData(typeName: string): Promise<TypeDataResponse> {
+  try {
+    const url = `${POKEAPI_BASE_URL}/type/${typeName.toLowerCase()}`;
+    const response = await fetch(url);
+
+    if (!response.ok) {
+      throw new Error(
+        `Failed to fetch type data: ${response.status} ${response.statusText}`
+      );
+    }
+
+    const data: TypeDataResponse = await response.json();
+
+    // Validate response structure
+    if (!data.name || !data.damage_relations) {
+      throw new Error('Invalid response format from Pokemon Type API');
+    }
+
+    return data;
+  } catch (error) {
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error(`Unexpected error fetching type data: ${String(error)}`);
   }
 }

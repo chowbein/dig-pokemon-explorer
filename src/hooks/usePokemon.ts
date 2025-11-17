@@ -11,8 +11,9 @@ import {
   fetchPokemonDetail,
   fetchPokemonSpecies,
   fetchEvolutionChain,
+  fetchTypeData,
 } from '../services/api';
-import type { PokemonListResponse, Pokemon, PokemonListItem, EvolutionChainItem } from '../types/pokemon';
+import type { PokemonListResponse, Pokemon, PokemonListItem, EvolutionChainItem, TypeDataResponse } from '../types/pokemon';
 
 /**
  * Custom hook for infinite scrolling Pokemon list.
@@ -181,5 +182,38 @@ export function useEvolutionChain(pokemonName: string | null) {
     isLoading: speciesQuery.isLoading || evolutionChainQuery.isLoading,
     isError: speciesQuery.isError || evolutionChainQuery.isError,
     error: speciesQuery.error || evolutionChainQuery.error,
+  };
+}
+
+/**
+ * Custom hook for fetching type damage relations for multiple types.
+ * Uses React Query's useQueries to fetch type data in parallel.
+ * 
+ * - Fetches type damage relations for each type in parallel
+ * - Automatically caches results for each type
+ * - Used to calculate team weaknesses and resistances
+ * 
+ * @param typeNames - Array of Pokemon type names to fetch
+ * @returns Object with type data array and loading/error states
+ */
+export function useTypeData(typeNames: string[]) {
+  const queries = useQueries({
+    queries: typeNames.map((typeName) => ({
+      queryKey: ['typeData', typeName],
+      queryFn: () => fetchTypeData(typeName),
+      enabled: typeNames.length > 0,
+      staleTime: 1000 * 60 * 30, // 30 minutes (type data doesn't change)
+    })),
+  });
+
+  const isLoading = queries.some((query) => query.isLoading);
+  const isError = queries.some((query) => query.isError);
+  const errors = queries.filter((query) => query.error).map((query) => query.error);
+
+  return {
+    data: queries.map((query) => query.data).filter((data): data is TypeDataResponse => !!data),
+    isLoading,
+    isError,
+    error: errors.length > 0 ? errors[0] : null,
   };
 }

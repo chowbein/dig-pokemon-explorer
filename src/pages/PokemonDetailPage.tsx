@@ -7,6 +7,7 @@ import { useParams, Link } from 'react-router-dom';
 import { usePokemonDetail, useEvolutionChain } from '../hooks/usePokemon';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { getTypeColors } from '../lib/pokemonTypeColors';
+import { useTeam } from '../context/TeamContext';
 
 /**
  * Pokemon detail page for individual Pokemon.
@@ -24,6 +25,7 @@ export function PokemonDetailPage() {
     isLoading: isLoadingEvolution,
     isError: isErrorEvolution,
   } = useEvolutionChain(name || null);
+  const { addPokemonToTeam, isTeamFull, isPokemonInTeam } = useTeam();
 
   /**
    * Capitalizes the first letter of a string.
@@ -121,6 +123,26 @@ export function PokemonDetailPage() {
 
   const capitalizedName = capitalize(pokemon.name);
 
+  // Team management
+  const isInTeam = isPokemonInTeam(pokemon.id);
+  const canAddToTeam = !isTeamFull && !isInTeam;
+
+  /**
+   * Handles adding Pokemon to team.
+   */
+  const handleAddToTeam = () => {
+    if (canAddToTeam) {
+      const success = addPokemonToTeam({
+        id: pokemon.id,
+        name: pokemon.name,
+        imageUrl: imageUrl,
+      });
+      if (success) {
+        // Could show a toast notification here
+      }
+    }
+  };
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       {/* Back Button */}
@@ -174,6 +196,23 @@ export function PokemonDetailPage() {
                 );
               })}
             </div>
+
+            {/* Add to Team Button */}
+            <button
+              onClick={handleAddToTeam}
+              disabled={!canAddToTeam}
+              className={`px-6 py-3 rounded-lg font-semibold transition-colors ${
+                canAddToTeam
+                  ? 'bg-blue-600 hover:bg-blue-700 text-white'
+                  : 'bg-gray-300 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed'
+              }`}
+            >
+              {isInTeam
+                ? 'Already in Team'
+                : isTeamFull
+                  ? 'Team Full (6/6)'
+                  : 'Add to Team'}
+            </button>
           </div>
         </div>
       </div>

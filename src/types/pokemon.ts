@@ -208,3 +208,35 @@ export interface EvolutionChainItem {
   /** Evolution method details */
   method: string;
 }
+
+/**
+ * Type Damage Relations
+ * Damage relations from Pokemon API type endpoint.
+ * API: https://pokeapi.co/api/v2/type/{type_name}
+ */
+export interface TypeDamageRelations {
+  /** Types that deal double damage to this type */
+  double_damage_from: Array<{
+    name: string;
+    url: string;
+  }>;
+  /** Types that deal half damage to this type */
+  half_damage_from: Array<{
+    name: string;
+    url: string;
+  }>;
+  /** Types that deal no damage to this type */
+  no_damage_from: Array<{
+    name: string;
+    url: string;
+  }>;
+}
+
+/**
+ * Type Data Response
+ * Complete type data from Pokemon API type endpoint.
+ */
+export interface TypeDataResponse {
+  name: string;
+  damage_relations: TypeDamageRelations;
+}
