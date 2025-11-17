@@ -58,7 +58,7 @@ Upon investigating the PokeAPI's `/pokemon-species/{name}` endpoint responses, I
 
 To solve this systematically, I built a **habitat inference system** (`habitatInference.ts`) that intelligently predicts habitats based on Pokemon type combinations:
 
-1. **Type Combination Patterns (Priority 1):** The system contains 100+ rules mapping specific type pairs to habitats. For example:
+1. **Type Combination Patterns (Priority 1):** The system contains 50+ type combination rules and 18 single-type fallback patterns, totaling 70+ habitat inference rules. For example:
    - Water + Flying → `waters-edge` (like Gyarados, Pelipper)
    - Rock + Ground → `cave` (like Onix, Golem)
    - Grass + Bug → `forest` (like Paras, Parasect)
@@ -70,3 +70,5 @@ To solve this systematically, I built a **habitat inference system** (`habitatIn
 3. **API Data Preference:** The system always uses official API habitat data when available, only inferring when the field is `null`
 
 This solution provides contextually appropriate backgrounds for 100% of Pokemon across all filters and pages, enhancing the visual experience while working around the API's incomplete data. The inference logic is based on observable patterns from Pokemon that do have habitat data, making the predictions ecologically and thematically accurate. 
+
+The last challenge faced is another technical one, particularly related to styling. This was my first time trying to use Tailwind and was not used to styling the elements inline with the elements (I got used to using class names and having a separate css file for all the styling). I realized this might be the tradeoff between the two methods and mainly addressed it by just learning the syntax and how it worked. I realized that this styling approach is better for more complex applications with frontend edge cases.
