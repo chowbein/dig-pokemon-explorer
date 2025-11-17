@@ -93,6 +93,10 @@ export interface Pokemon {
   sprites: PokemonSprites;
   /** Array of types (most Pokemon have 1-2 types) */
   types: PokemonType[];
+  /** Height in decimeters (divide by 10 for meters) */
+  height: number;
+  /** Weight in hectograms (divide by 10 for kilograms) */
+  weight: number;
   /** Array of stats (HP, Attack, Defense, etc.) */
   stats: PokemonStat[];
   /** Array of abilities */
