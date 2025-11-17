@@ -36,7 +36,7 @@ export function getTypeColors(typeName: string): {
     ghost: { bg: 'bg-violet-100', text: 'text-violet-800', bgDark: 'bg-violet-900', textDark: 'text-violet-200' },
     dragon: { bg: 'bg-indigo-100', text: 'text-indigo-800', bgDark: 'bg-indigo-900', textDark: 'text-indigo-200' },
     dark: { bg: 'bg-gray-700', text: 'text-gray-200', bgDark: 'bg-gray-800', textDark: 'text-gray-300' },
-    steel: { bg: 'bg-slate-100', text: 'text-slate-800', bgDark: 'bg-slate-700', textDark: 'text-slate-200' },
+    steel: { bg: 'bg-slate-200', text: 'text-slate-900', bgDark: 'bg-slate-600', textDark: 'text-slate-100' },
     fairy: { bg: 'bg-rose-100', text: 'text-rose-800', bgDark: 'bg-rose-900', textDark: 'text-rose-200' },
   };
 

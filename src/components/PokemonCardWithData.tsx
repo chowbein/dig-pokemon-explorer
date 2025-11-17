@@ -4,6 +4,7 @@
  */
 
 import { usePokemon } from '../hooks/usePokemon';
+import { useTeam } from '../context/TeamContext';
 import { PokemonCard } from './PokemonCard';
 import { LoadingSpinner } from './ui/LoadingSpinner';
 
@@ -17,17 +18,20 @@ interface PokemonCardWithDataProps {
 /**
  * Card component that fetches individual Pokemon data and displays it.
  * Implements N+1 query pattern: each card fetches its own data.
+ * Supports drag and drop functionality for adding Pokemon to team.
  * 
  * - Fetches complete Pokemon data including sprites and types
  * - Shows loading spinner while fetching
  * - Displays PokemonCard with fetched data
  * - Uses React Query for efficient caching and data management
+ * - Makes card draggable for team management
  * 
  * @param url - Pokemon API URL from PokemonListItem
  * @param name - Pokemon name (used as key and fallback)
  */
 export function PokemonCardWithData({ url, name }: PokemonCardWithDataProps) {
   const { data: pokemon, isLoading, isError } = usePokemon(url);
+  const { isTeamFull, isPokemonInTeam } = useTeam();
 
   if (isLoading) {
     return (
@@ -51,11 +55,62 @@ export function PokemonCardWithData({ url, name }: PokemonCardWithDataProps) {
     pokemon.sprites.front_default ||
     null;
 
+  /**
+   * Handles drag start event.
+   * Stores Pokemon data in dataTransfer for drop handling.
+   * Prevents dragging if Pokemon is already in team or team is full.
+   */
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>) => {
+    // Prevent dragging if Pokemon is already in team
+    if (isPokemonInTeam(pokemon.id)) {
+      e.preventDefault();
+      return;
+    }
+
+    // Prevent dragging if team is full
+    if (isTeamFull) {
+      e.preventDefault();
+      return;
+    }
+
+    const pokemonData = {
+      id: pokemon.id,
+      name: pokemon.name,
+      imageUrl: imageUrl,
+    };
+    
+    // Store Pokemon data as JSON in dataTransfer
+    e.dataTransfer.setData('application/json', JSON.stringify(pokemonData));
+    e.dataTransfer.effectAllowed = 'move';
+    
+    // Add visual feedback during drag
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = '0.5';
+    }
+  };
+
+  /**
+   * Handles drag end event.
+   * Restores card opacity after drag completes.
+   */
+  const handleDragEnd = (e: React.DragEvent<HTMLDivElement>) => {
+    if (e.currentTarget) {
+      e.currentTarget.style.opacity = '1';
+    }
+  };
+
   return (
-    <PokemonCard
-      name={pokemon.name}
-      image={imageUrl}
-      types={pokemon.types}
-    />
+    <div
+      draggable={true}
+      onDragStart={handleDragStart}
+      onDragEnd={handleDragEnd}
+      className="cursor-grab active:cursor-grabbing"
+    >
+      <PokemonCard
+        name={pokemon.name}
+        image={imageUrl}
+        types={pokemon.types}
+      />
+    </div>
   );
 }

@@ -4,13 +4,14 @@
  */
 
 import { Link } from 'react-router-dom';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { useQueries } from '@tanstack/react-query';
 import { fetchPokemonDetail } from '../services/api';
 import { fetchTypeData } from '../services/api';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 import type { TypeDataResponse } from '../types/pokemon';
+import type { TeamPokemon } from '../context/TeamContext';
 
 /**
  * Team sidebar component displaying 6 Pokemon team slots.
@@ -27,7 +28,8 @@ import type { TypeDataResponse } from '../types/pokemon';
  * - Displays weaknesses and resistances with colored badges
  */
 export function TeamSidebar() {
-  const { team, removePokemonFromTeam } = useTeam();
+  const { team, removePokemonFromTeam, addPokemonToTeam, isTeamFull, isPokemonInTeam } = useTeam();
+  const [draggedOverSlot, setDraggedOverSlot] = useState<number | null>(null);
 
   // Fetch Pokemon data for each team member to get types
   const pokemonQueries = useQueries({
@@ -192,6 +194,60 @@ export function TeamSidebar() {
     return team[index] || null;
   });
 
+  /**
+   * Handles drag over event on a slot.
+   * Prevents default to allow drop and provides visual feedback.
+   */
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, slotIndex: number) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    setDraggedOverSlot(slotIndex);
+  };
+
+  /**
+   * Handles drag leave event.
+   * Removes visual feedback when dragging leaves the slot.
+   */
+  const handleDragLeave = () => {
+    setDraggedOverSlot(null);
+  };
+
+  /**
+   * Handles drop event on a slot.
+   * Extracts Pokemon data from dataTransfer and adds to team.
+   */
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, slotIndex: number) => {
+    e.preventDefault();
+    setDraggedOverSlot(null);
+
+    try {
+      const pokemonDataJson = e.dataTransfer.getData('application/json');
+      if (!pokemonDataJson) return;
+
+      const pokemonData: TeamPokemon = JSON.parse(pokemonDataJson);
+
+      // Validate data structure
+      if (!pokemonData.id || !pokemonData.name) {
+        return;
+      }
+
+      // Check if team is full
+      if (isTeamFull) {
+        return;
+      }
+
+      // Check if Pokemon is already in team
+      if (isPokemonInTeam(pokemonData.id)) {
+        return;
+      }
+
+      // Add Pokemon to team
+      addPokemonToTeam(pokemonData);
+    } catch (error) {
+      console.error('Error handling drop:', error);
+    }
+  };
+
   return (
     <div className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
       <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
@@ -201,7 +257,24 @@ export function TeamSidebar() {
         {slots.map((pokemon, index) => (
           <div
             key={index}
-            className="relative aspect-square border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg bg-gray-50 dark:bg-gray-900/50 flex flex-col items-center justify-center overflow-hidden"
+            className={`relative aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center overflow-hidden transition-all ${
+              pokemon
+                ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50'
+                : draggedOverSlot === index
+                ? 'border-blue-500 dark:border-blue-400 bg-blue-100 dark:bg-blue-900/30 border-solid'
+                : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 hover:border-gray-400 dark:hover:border-gray-500'
+            }`}
+            onDragOver={(e) => {
+              if (!pokemon) {
+                handleDragOver(e, index);
+              }
+            }}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => {
+              if (!pokemon) {
+                handleDrop(e, index);
+              }
+            }}
           >
             {pokemon ? (
               <>
@@ -237,9 +310,14 @@ export function TeamSidebar() {
                 </div>
               </>
             ) : (
-              <span className="text-xs text-gray-400 dark:text-gray-500">
-                Empty
-              </span>
+              <div className="flex flex-col items-center justify-center text-center px-2">
+                <span className="text-xs text-gray-400 dark:text-gray-500 mb-1">
+                  Empty
+                </span>
+                <span className="text-[10px] text-gray-300 dark:text-gray-600">
+                  Drop here
+                </span>
+              </div>
             )}
           </div>
         ))}
