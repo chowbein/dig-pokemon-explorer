@@ -65,6 +65,23 @@ export function PokemonDetailPage() {
     return Math.min((value / max) * 100, 100);
   };
 
+  /**
+   * Extracts Pokemon ID from species URL.
+   * Species URLs format: https://pokeapi.co/api/v2/pokemon-species/{id}/
+   */
+  const extractPokemonIdFromSpeciesUrl = (speciesUrl: string): number | null => {
+    const match = speciesUrl.match(/\/pokemon-species\/(\d+)\//);
+    return match ? parseInt(match[1], 10) : null;
+  };
+
+  /**
+   * Constructs Pokemon sprite image URL from ID.
+   * Uses official artwork sprite from PokeAPI CDN.
+   */
+  const getPokemonImageUrl = (id: number): string => {
+    return `https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/${id}.png`;
+  };
+
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
@@ -251,6 +268,8 @@ export function PokemonDetailPage() {
                 .map((word) => capitalize(word))
                 .join(' ');
               const isCurrentPokemon = evolution.name === pokemon.name;
+              const pokemonId = extractPokemonIdFromSpeciesUrl(evolution.speciesUrl);
+              const evolutionImageUrl = pokemonId ? getPokemonImageUrl(pokemonId) : null;
 
               return (
                 <div key={index} className="flex items-center gap-2 md:gap-4">
@@ -266,14 +285,22 @@ export function PokemonDetailPage() {
                     <div className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-2">
                       {evolutionName}
                     </div>
-                    {/* Pokemon Image Placeholder - Would need to fetch each Pokemon's sprite */}
-                    <div className="w-20 h-20 bg-gray-100 dark:bg-gray-600 rounded flex items-center justify-center">
-                      <span className="text-xs text-gray-500 dark:text-gray-400">
-                        #{evolution.name}
-                      </span>
+                    {/* Pokemon Image */}
+                    <div className="w-24 h-24 bg-gray-100 dark:bg-gray-600 rounded-lg flex items-center justify-center mb-2">
+                      {evolutionImageUrl ? (
+                        <img
+                          src={evolutionImageUrl}
+                          alt={evolutionName}
+                          className="w-full h-full object-contain"
+                        />
+                      ) : (
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
+                          No image
+                        </span>
+                      )}
                     </div>
                     {isCurrentPokemon && (
-                      <span className="mt-2 text-xs font-medium text-blue-600 dark:text-blue-400">
+                      <span className="mt-1 text-xs font-medium text-blue-600 dark:text-blue-400">
                         Current
                       </span>
                     )}

@@ -266,6 +266,7 @@ export async function fetchEvolutionChain(
 
       evolutionChain.push({
         name: chain.species.name,
+        speciesUrl: chain.species.url,
         min_level: minLevel,
         trigger: trigger,
         method: method,

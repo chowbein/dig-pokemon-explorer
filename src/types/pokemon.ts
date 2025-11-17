@@ -199,6 +199,8 @@ export interface EvolutionChainResponse {
 export interface EvolutionChainItem {
   /** Pokemon name */
   name: string;
+  /** Pokemon species URL (used to extract ID for images) */
+  speciesUrl: string;
   /** Evolution level (if applicable) */
   min_level: number | null;
   /** Evolution trigger name */
