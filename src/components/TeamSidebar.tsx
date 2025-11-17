@@ -9,6 +9,7 @@ import { useTeam } from '../context/TeamContext';
 import { useQueries } from '@tanstack/react-query';
 import { fetchPokemonDetail, fetchTypeData } from '../services/api';
 import { useTeamTypeAnalysis } from '../hooks/useTeamTypeAnalysis';
+import { TeamSummary } from './TeamSummary';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 import type { TeamPokemon } from '../context/TeamContext';
 
@@ -118,24 +119,6 @@ export function TeamSidebar() {
   const slots = Array.from({ length: 6 }, (_, index) => {
     return team[index] || null;
   });
-
-  /**
-   * Gets size classes based on count for visual prominence.
-   * Higher counts get larger badges to make them more noticeable.
-   */
-  const getSizeClasses = (count: number): string => {
-    if (count >= 5) {
-      return 'px-4 py-2 text-lg font-bold transform scale-110'; // Largest for very high counts (5-6)
-    } else if (count >= 4) {
-      return 'px-4 py-1.5 text-base font-bold transform scale-105'; // Large for high counts
-    } else if (count >= 3) {
-      return 'px-3 py-1.5 text-sm font-semibold'; // Medium-large
-    } else if (count >= 2) {
-      return 'px-2.5 py-1 text-xs font-medium'; // Medium
-    } else {
-      return 'px-2 py-0.5 text-xs font-normal opacity-75'; // Smallest for count of 1
-    }
-  };
 
   /**
    * Handles drag over event on a slot.
@@ -333,33 +316,81 @@ export function TeamSidebar() {
             </div>
           ) : (
             <>
-              {/* Weaknesses Section */}
-              {Object.keys(weaknesses).length > 0 && (
+              {/* Team Summary */}
+              <TeamSummary weaknesses={weaknesses} resistances={resistances} />
+
+              {/* Weaknesses and Resistances Table */}
+              {(Object.keys(weaknesses).length > 0 || Object.keys(resistances).length > 0) && (
                 <div className="mb-3">
-                  <h4 className="text-xs font-medium text-red-600 dark:text-red-400 mb-2">
-                    Team Weaknesses
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5 items-center mb-2">
-                    {Object.entries(weaknesses)
-                      .sort(([, countA], [, countB]) => countB - countA) // Sort by count (highest first)
-                      .map(([typeName, count]) => {
-                        const colors = getTypeColors(typeName);
-                        const sizeClasses = getSizeClasses(count);
-                        return (
-                          <span
-                            key={typeName}
-                            className={`inline-flex items-center rounded ${sizeClasses} ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
-                            title={`${count} team member${count > 1 ? 's' : ''} weak to ${typeName}`}
-                          >
-                            {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
-                          </span>
-                        );
-                      })}
+                  <div className="overflow-x-auto">
+                    <table className="w-full border-collapse text-xs">
+                      <thead>
+                        <tr>
+                          <th className="text-left px-2 py-2 font-semibold text-red-600 dark:text-red-400 border-b border-gray-300 dark:border-gray-600">
+                            Weaknesses
+                          </th>
+                          <th className="text-left px-2 py-2 font-semibold text-green-600 dark:text-green-400 border-b border-gray-300 dark:border-gray-600">
+                            Resistances
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {(() => {
+                          // Sort weaknesses and resistances by count (highest first)
+                          const sortedWeaknesses = Object.entries(weaknesses)
+                            .sort(([, countA], [, countB]) => countB - countA);
+                          const sortedResistances = Object.entries(resistances)
+                            .sort(([, countA], [, countB]) => countB - countA);
+                          
+                          // Get max rows needed
+                          const maxRows = Math.max(sortedWeaknesses.length, sortedResistances.length);
+                          
+                          // Create rows for table
+                          return Array.from({ length: maxRows }, (_, index) => {
+                            const weakness = sortedWeaknesses[index];
+                            const resistance = sortedResistances[index];
+                            
+                            return (
+                              <tr key={index} className="border-b border-gray-200 dark:border-gray-700">
+                                {/* Weaknesses Column */}
+                                <td className="px-2 py-1.5 text-left">
+                                  {weakness ? (
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${getTypeColors(weakness[0]).bg} ${getTypeColors(weakness[0]).text} dark:${getTypeColors(weakness[0]).bgDark} dark:${getTypeColors(weakness[0]).textDark}`}
+                                      title={`${weakness[1]} team member${weakness[1] > 1 ? 's' : ''} weak to ${weakness[0]}`}
+                                    >
+                                      {weakness[0].charAt(0).toUpperCase() + weakness[0].slice(1)}
+                                      <span className="font-semibold">({weakness[1]})</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-600">—</span>
+                                  )}
+                                </td>
+                                {/* Resistances Column */}
+                                <td className="px-2 py-1.5 text-left">
+                                  {resistance ? (
+                                    <span
+                                      className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${getTypeColors(resistance[0]).bg} ${getTypeColors(resistance[0]).text} dark:${getTypeColors(resistance[0]).bgDark} dark:${getTypeColors(resistance[0]).textDark}`}
+                                      title={`${resistance[1]} team member${resistance[1] > 1 ? 's' : ''} resist ${resistance[0]}`}
+                                    >
+                                      {resistance[0].charAt(0).toUpperCase() + resistance[0].slice(1)}
+                                      <span className="font-semibold">({resistance[1]})</span>
+                                    </span>
+                                  ) : (
+                                    <span className="text-gray-400 dark:text-gray-600">—</span>
+                                  )}
+                                </td>
+                              </tr>
+                            );
+                          });
+                        })()}
+                      </tbody>
+                    </table>
                   </div>
                   
                   {/* Top Weakness Recommendation */}
                   {topWeaknessType && (
-                    <div className="mt-2 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
+                    <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex-1">
                           <p className="text-xs font-medium text-red-800 dark:text-red-200 mb-1">
@@ -379,32 +410,6 @@ export function TeamSidebar() {
                       </div>
                     </div>
                   )}
-                </div>
-              )}
-
-              {/* Resistances Section */}
-              {Object.keys(resistances).length > 0 && (
-                <div>
-                  <h4 className="text-xs font-medium text-green-600 dark:text-green-400 mb-2">
-                    Team Resistances
-                  </h4>
-                  <div className="flex flex-wrap gap-1.5 items-center">
-                    {Object.entries(resistances)
-                      .sort(([, countA], [, countB]) => countB - countA) // Sort by count (highest first)
-                      .map(([typeName, count]) => {
-                        const colors = getTypeColors(typeName);
-                        const sizeClasses = getSizeClasses(count);
-                        return (
-                          <span
-                            key={typeName}
-                            className={`inline-flex items-center rounded ${sizeClasses} ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
-                            title={`${count} team member${count > 1 ? 's' : ''} resist ${typeName}`}
-                          >
-                            {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
-                          </span>
-                        );
-                      })}
-                  </div>
                 </div>
               )}
 

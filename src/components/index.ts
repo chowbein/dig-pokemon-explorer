@@ -3,5 +3,6 @@
 export * from './PokemonCard';
 export * from './PokemonCardWithData';
 export * from './TeamSidebar';
+export * from './TeamSummary';
 export * from './ui';
 
