@@ -17,6 +17,8 @@ interface PokemonCardProps {
       name: string;
     };
   }>;
+  /** Optional compact variant for smaller displays */
+  compact?: boolean;
 }
 
 /**
@@ -28,17 +30,23 @@ interface PokemonCardProps {
  * @param image - Image URL for Pokemon sprite/artwork
  * @param types - Array of Pokemon types to display as badges
  */
-export function PokemonCard({ name, image, types }: PokemonCardProps) {
+export function PokemonCard({ name, image, types, compact = false }: PokemonCardProps) {
   // Capitalize first letter of Pokemon name
   const capitalizedName = name.charAt(0).toUpperCase() + name.slice(1);
+
+  const cardPadding = compact ? 'p-2' : 'p-4';
+  const imageHeight = compact ? 'h-20 mb-2' : 'h-40 mb-4';
+  const nameClasses = compact
+    ? 'text-sm font-semibold text-gray-800 dark:text-gray-200 mb-1.5 text-center'
+    : 'text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 text-center';
 
   return (
     <Link
       to={`/pokemon/${name}`}
-      className="block bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 hover:scale-105 transition-transform cursor-pointer border border-gray-200 dark:border-gray-700 no-underline"
+      className={`block bg-white dark:bg-gray-800 rounded-lg shadow-md ${cardPadding} hover:scale-105 transition-transform cursor-pointer border border-gray-200 dark:border-gray-700 no-underline h-full flex flex-col`}
     >
       {/* Pokemon Image */}
-      <div className="flex justify-center items-center h-40 mb-4 bg-gray-50 dark:bg-gray-900 rounded-lg">
+      <div className={`flex justify-center items-center ${imageHeight} bg-gray-50 dark:bg-gray-900 rounded-lg`}>
         {image ? (
           <img
             src={image}
@@ -51,12 +59,16 @@ export function PokemonCard({ name, image, types }: PokemonCardProps) {
       </div>
 
       {/* Pokemon Name */}
-      <h3 className="text-lg font-semibold text-gray-800 dark:text-gray-200 mb-3 text-center">
+      <h3 className={nameClasses}>
         {capitalizedName}
       </h3>
 
       {/* Pokemon Types */}
-      <div className="flex flex-wrap gap-2 justify-center">
+      <div
+        className={`flex flex-wrap ${compact ? 'gap-1' : 'gap-2'} justify-center ${
+          compact ? 'mt-0.5' : 'mt-auto'
+        }`}
+      >
         {types.map((type, index) => {
           const typeColors = getTypeColors(type.type.name);
           const capitalizedType = type.type.name.charAt(0).toUpperCase() + type.type.name.slice(1);
@@ -64,7 +76,7 @@ export function PokemonCard({ name, image, types }: PokemonCardProps) {
           return (
             <span
               key={index}
-              className={`px-3 py-1 text-xs font-medium rounded-full ${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark}`}
+              className={`${compact ? 'px-1.5 py-0.5 text-[7px]' : 'px-3 py-1 text-xs'} font-medium rounded-full ${typeColors.bg} ${typeColors.text} dark:${typeColors.bgDark} dark:${typeColors.textDark}`}
             >
               {capitalizedType}
             </span>

@@ -3,13 +3,14 @@
  * Displays the user's Pokemon team with 6 slots and team weaknesses/resistances.
  */
 
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useMemo, useState } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { useQueries } from '@tanstack/react-query';
 import { fetchPokemonDetail, fetchTypeData } from '../services/api';
 import { useTeamTypeAnalysis } from '../hooks/useTeamTypeAnalysis';
 import { TeamSummary } from './TeamSummary';
+import { PokemonCard } from './PokemonCard';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 import type { TeamPokemon } from '../context/TeamContext';
 
@@ -51,6 +52,17 @@ export function TeamSidebar() {
       .map((query) => query.data)
       .filter((pokemon): pokemon is NonNullable<typeof pokemon> => !!pokemon);
   }, [pokemonQueries]);
+
+  const pokemonDetailsMap = useMemo(() => {
+    const map = new Map<number, NonNullable<typeof pokemonQueries[number]['data']>>();
+    team.forEach((teamPokemon, index) => {
+      const detail = pokemonQueries[index]?.data;
+      if (teamPokemon && detail) {
+        map.set(teamPokemon.id, detail);
+      }
+    });
+    return map;
+  }, [pokemonQueries, team]);
 
   // Use custom hook for team type analysis
   // API Integration: Fetches type data from PokeAPI and aggregates weaknesses/resistances
@@ -205,12 +217,12 @@ export function TeamSidebar() {
   };
 
   return (
-    <div className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+    <div className="w-full bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-2">
       <h2 className="text-lg font-bold text-gray-800 dark:text-gray-200 mb-4">
         My Team ({team.length}/6)
       </h2>
       <div
-        className={`grid grid-cols-3 gap-3 mb-4 p-2 rounded-lg transition-all ${
+        className={`grid grid-cols-3 gap-0.5 items-stretch mb-4 p-0 rounded-lg transition-all ${
           isDraggingOverTeam && !isTeamFull
             ? 'bg-blue-50 dark:bg-blue-900/20 ring-2 ring-blue-400 dark:ring-blue-500 ring-dashed'
             : ''
@@ -219,78 +231,71 @@ export function TeamSidebar() {
         onDragLeave={handleTeamDragLeave}
         onDrop={handleDrop}
       >
-        {slots.map((pokemon, index) => (
-          <div
-            key={index}
-            className={`relative aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center overflow-hidden transition-all ${
-              pokemon
-                ? 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50'
-                : draggedOverSlot === index || (isDraggingOverTeam && !isTeamFull)
-                ? 'border-blue-500 dark:border-blue-400 bg-blue-100 dark:bg-blue-900/30 border-solid'
-                : 'border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50 hover:border-gray-400 dark:hover:border-gray-500'
-            }`}
-            onDragOver={(e) => {
-              e.stopPropagation();
-              if (!pokemon) {
-                handleDragOver(e, index);
-              }
-            }}
-            onDragLeave={(e) => {
-              e.stopPropagation();
-              handleDragLeave();
-            }}
-            onDrop={(e) => {
-              e.stopPropagation();
-              if (!pokemon) {
-                handleDrop(e, index);
-              }
-            }}
-          >
-            {pokemon ? (
-              <>
-                {/* Pokemon Image */}
-                <Link
-                  to={`/pokemon/${pokemon.name}`}
-                  className="w-full h-full flex items-center justify-center p-2 hover:opacity-80 transition-opacity"
-                >
-                  {pokemon.imageUrl ? (
-                    <img
-                      src={pokemon.imageUrl}
-                      alt={pokemon.name}
-                      className="w-full h-full object-contain"
-                    />
-                  ) : (
-                    <span className="text-xs text-gray-400 dark:text-gray-600">
-                      {pokemon.name}
-                    </span>
-                  )}
-                </Link>
-                {/* Remove Button */}
-                <button
-                  onClick={() => removePokemonFromTeam(pokemon.id)}
-                  className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors"
-                  aria-label={`Remove ${pokemon.name} from team`}
-                  title={`Remove ${pokemon.name}`}
-                >
-                  ×
-                </button>
-                {/* Pokemon Name */}
-                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs px-1 py-0.5 text-center truncate">
-                  {pokemon.name}
+        {slots.map((pokemon, index) => {
+          const pokemonDetails = pokemon ? pokemonDetailsMap.get(pokemon.id) : null;
+          const imageUrl = pokemonDetails
+            ? pokemonDetails.sprites.other?.['official-artwork']?.front_default ||
+              pokemonDetails.sprites.front_default ||
+              null
+            : pokemon?.imageUrl ?? null;
+
+          return (
+            <div
+              key={index}
+              className={`relative rounded-lg transition-all h-full min-h-[160px] ${
+                !pokemon
+                  ? draggedOverSlot === index || (isDraggingOverTeam && !isTeamFull)
+                    ? 'border-2 border-blue-500 dark:border-blue-400 bg-blue-100/60 dark:bg-blue-900/30'
+                    : 'border-2 border-dashed border-gray-300 dark:border-gray-600 bg-gray-50 dark:bg-gray-900/50'
+                  : ''
+              }`}
+              onDragOver={(e) => {
+                e.stopPropagation();
+                if (!pokemon) {
+                  handleDragOver(e, index);
+                }
+              }}
+              onDragLeave={(e) => {
+                e.stopPropagation();
+                handleDragLeave();
+              }}
+              onDrop={(e) => {
+                e.stopPropagation();
+                if (!pokemon) {
+                  handleDrop(e, index);
+                }
+              }}
+            >
+              {pokemon ? (
+                <div className="relative h-full">
+                  <PokemonCard
+                    name={pokemonDetails?.name || pokemon.name}
+                    image={imageUrl}
+                    types={pokemonDetails?.types || []}
+                    compact
+                  />
+                  <button
+                    onClick={() => removePokemonFromTeam(pokemon.id)}
+                    className="absolute top-1 right-1 w-5 h-5 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center text-xs font-bold transition-colors shadow-md z-10"
+                    aria-label={`Remove ${pokemon.name} from team`}
+                    title={`Remove ${pokemon.name}`}
+                  >
+                    ×
+                  </button>
                 </div>
-              </>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center px-2">
-                <span className="text-xs text-gray-400 dark:text-gray-500 mb-1">
-                  Empty
-                </span>
-                <span className="text-[10px] text-gray-300 dark:text-gray-600">
-                  Drop here
-                </span>
-              </div>
-            )}
-          </div>
-        ))}
+              ) : (
+                <div className="flex flex-col items-center justify-center text-center px-2 h-full">
+                  <span className="text-xs font-semibold text-gray-500 dark:text-gray-400 mb-1">
+                    Empty Slot
+                  </span>
+                  <span className="text-[10px] text-gray-400 dark:text-gray-500">
+                    Drag here
+                  </span>
+                </div>
+              )}
+            </div>
+          );
+        })}
       </div>
 
       {/* Team Weaknesses and Resistances */}
