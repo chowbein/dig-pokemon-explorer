@@ -8,9 +8,8 @@ import { useMemo, useState } from 'react';
 import { useTeam } from '../context/TeamContext';
 import { useQueries } from '@tanstack/react-query';
 import { fetchPokemonDetail } from '../services/api';
-import { fetchTypeData } from '../services/api';
+import { useTeamTypeAnalysis } from '../hooks/useTeamTypeAnalysis';
 import { getTypeColors } from '../lib/pokemonTypeColors';
-import type { TypeDataResponse } from '../types/pokemon';
 import type { TeamPokemon } from '../context/TeamContext';
 
 /**
@@ -32,7 +31,7 @@ export function TeamSidebar() {
   const [draggedOverSlot, setDraggedOverSlot] = useState<number | null>(null);
   const [isDraggingOverTeam, setIsDraggingOverTeam] = useState(false);
 
-  // Fetch Pokemon data for each team member to get types
+  // Fetch Pokemon data for each team member (needed for display and type analysis)
   const pokemonQueries = useQueries({
     queries: team.map((pokemon) => ({
       queryKey: ['pokemon', pokemon.id, pokemon.name],
@@ -41,154 +40,21 @@ export function TeamSidebar() {
     })),
   });
 
-  // Extract all unique types from team Pokemon
-  const uniqueTypes = useMemo(() => {
-    const typeSet = new Set<string>();
-    pokemonQueries.forEach((query) => {
-      if (query.data?.types) {
-        query.data.types.forEach((type) => {
-          typeSet.add(type.type.name);
-        });
-      }
-    });
-    return Array.from(typeSet);
+  // Prepare team data for type analysis hook
+  // Complex Logic: Maps Pokemon query results to format expected by useTeamTypeAnalysis
+  const teamWithTypes = useMemo(() => {
+    return pokemonQueries
+      .map((query) => query.data)
+      .filter((pokemon): pokemon is NonNullable<typeof pokemon> => !!pokemon);
   }, [pokemonQueries]);
 
-  // Fetch type damage relations for all unique types
-  const typeQueries = useQueries({
-    queries: uniqueTypes.map((typeName) => ({
-      queryKey: ['typeData', typeName],
-      queryFn: () => fetchTypeData(typeName),
-      enabled: uniqueTypes.length > 0,
-      staleTime: 1000 * 60 * 30, // 30 minutes
-    })),
-  });
-
-  // Aggregate weaknesses and resistances
-  // Complex Logic: Calculates actual damage multipliers per Pokemon considering dual-type interactions
-  // For each Pokemon, multiplies effectiveness from all its types to get final damage multiplier
-  const { weaknesses, resistances } = useMemo(() => {
-    // Create a map of type name to damage relations for quick lookup
-    const typeDataMap = new Map<string, TypeDataResponse>();
-    typeQueries.forEach((query) => {
-      if (query.data) {
-        typeDataMap.set(query.data.name, query.data);
-      }
-    });
-
-    // First, collect all possible attacking types from all Pokemon types
-    const allAttackingTypes = new Set<string>();
-    pokemonQueries.forEach((query) => {
-      if (!query.data?.types) return;
-      query.data.types.forEach((type) => {
-        const typeData = typeDataMap.get(type.type.name);
-        if (typeData?.damage_relations) {
-          typeData.damage_relations.double_damage_from.forEach((t) => allAttackingTypes.add(t.name));
-          typeData.damage_relations.half_damage_from.forEach((t) => allAttackingTypes.add(t.name));
-          typeData.damage_relations.no_damage_from.forEach((t) => allAttackingTypes.add(t.name));
-        }
-      });
-    });
-
-    // For each Pokemon, calculate actual damage multipliers for each attacking type
-    const pokemonEffectiveness: Array<Map<string, number>> = [];
-
-    pokemonQueries.forEach((query) => {
-      if (!query.data?.types) return;
-
-      const effectiveness = new Map<string, number>();
-
-      // Get all types for this Pokemon
-      const pokemonTypes = query.data.types.map((t) => t.type.name);
-
-      // Calculate effectiveness for each attacking type
-      allAttackingTypes.forEach((attackingType) => {
-        let multiplier = 1; // Start with 1x (neutral)
-
-        pokemonTypes.forEach((pokemonType) => {
-          const typeData = typeDataMap.get(pokemonType);
-          if (!typeData?.damage_relations) return;
-
-          const relations = typeData.damage_relations;
-          let typeMultiplier = 1;
-
-          // Check for immunity first (0x)
-          if (relations.no_damage_from.some((t) => t.name === attackingType)) {
-            typeMultiplier = 0;
-          }
-          // Check for weakness (2x)
-          else if (relations.double_damage_from.some((t) => t.name === attackingType)) {
-            typeMultiplier = 2;
-          }
-          // Check for resistance (0.5x)
-          else if (relations.half_damage_from.some((t) => t.name === attackingType)) {
-            typeMultiplier = 0.5;
-          }
-
-          // Multiply effectiveness (dual-type interactions)
-          multiplier *= typeMultiplier;
-        });
-
-        effectiveness.set(attackingType, multiplier);
-      });
-
-      pokemonEffectiveness.push(effectiveness);
-    });
-
-    // Aggregate across all Pokemon
-    const weaknessMap = new Map<string, number>(); // Count Pokemon weak to each type
-    const resistanceMap = new Map<string, number>(); // Count Pokemon resistant to each type
-
-    allAttackingTypes.forEach((attackingType) => {
-      let weakCount = 0;
-      let resistCount = 0;
-
-      pokemonEffectiveness.forEach((effectiveness) => {
-        const multiplier = effectiveness.get(attackingType) || 1;
-
-        // Consider 2x or higher as weakness
-        if (multiplier >= 2) {
-          weakCount++;
-        }
-        // Consider 0.5x or lower (including 0x immunity) as resistance
-        if (multiplier <= 0.5) {
-          resistCount++;
-        }
-      });
-
-      if (weakCount > 0) {
-        weaknessMap.set(attackingType, weakCount);
-      }
-      if (resistCount > 0) {
-        resistanceMap.set(attackingType, resistCount);
-      }
-    });
-
-    // A type is a team weakness if at least one Pokemon is weak to it
-    // A type is a team resistance if most/all Pokemon resist it
-    const finalWeaknesses: string[] = [];
-    const finalResistances: string[] = [];
-
-    weaknessMap.forEach((count, typeName) => {
-      finalWeaknesses.push(typeName);
-    });
-
-    // Only show resistances where most Pokemon resist it (more than half)
-    resistanceMap.forEach((count, typeName) => {
-      if (count >= Math.ceil(pokemonEffectiveness.length / 2)) {
-        finalResistances.push(typeName);
-      }
-    });
-
-    return {
-      weaknesses: finalWeaknesses.sort(),
-      resistances: finalResistances.sort(),
-    };
-  }, [typeQueries, pokemonQueries]);
+  // Use custom hook for team type analysis
+  // API Integration: Fetches type data from PokeAPI and aggregates weaknesses/resistances
+  const { isLoading: isLoadingTypeAnalysis, weaknesses, resistances } =
+    useTeamTypeAnalysis(teamWithTypes);
 
   const isLoadingPokemon = pokemonQueries.some((query) => query.isLoading);
-  const isLoadingTypes = typeQueries.some((query) => query.isLoading);
-  const isLoading = isLoadingPokemon || isLoadingTypes;
+  const isLoading = isLoadingPokemon || isLoadingTypeAnalysis;
 
   // Create array of 6 slots (filled or empty)
   const slots = Array.from({ length: 6 }, (_, index) => {
@@ -218,7 +84,7 @@ export function TeamSidebar() {
    * Extracts Pokemon data from dataTransfer and adds to team.
    * Automatically finds the next available slot if dropped anywhere in team area.
    */
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>, slotIndex?: number) => {
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>, _slotIndex?: number) => {
     e.preventDefault();
     e.stopPropagation();
     setDraggedOverSlot(null);
@@ -387,25 +253,26 @@ export function TeamSidebar() {
           
           {isLoading ? (
             <div className="text-xs text-gray-500 dark:text-gray-400">
-              Calculating weaknesses and resistances...
+              Analyzing...
             </div>
           ) : (
             <>
               {/* Weaknesses Section */}
-              {weaknesses.length > 0 && (
+              {Object.keys(weaknesses).length > 0 && (
                 <div className="mb-3">
                   <h4 className="text-xs font-medium text-red-600 dark:text-red-400 mb-2">
-                    Weaknesses
+                    Team Weaknesses
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {weaknesses.map((typeName) => {
+                    {Object.entries(weaknesses).map(([typeName, count]) => {
                       const colors = getTypeColors(typeName);
                       return (
                         <span
                           key={typeName}
                           className={`px-2 py-1 rounded text-xs font-medium ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
+                          title={`${count} team member${count > 1 ? 's' : ''} weak to ${typeName}`}
                         >
-                          {typeName.charAt(0).toUpperCase() + typeName.slice(1)}
+                          {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
                         </span>
                       );
                     })}
@@ -414,20 +281,21 @@ export function TeamSidebar() {
               )}
 
               {/* Resistances Section */}
-              {resistances.length > 0 && (
+              {Object.keys(resistances).length > 0 && (
                 <div>
                   <h4 className="text-xs font-medium text-green-600 dark:text-green-400 mb-2">
-                    Resistances
+                    Team Resistances
                   </h4>
                   <div className="flex flex-wrap gap-1.5">
-                    {resistances.map((typeName) => {
+                    {Object.entries(resistances).map(([typeName, count]) => {
                       const colors = getTypeColors(typeName);
                       return (
                         <span
                           key={typeName}
                           className={`px-2 py-1 rounded text-xs font-medium ${colors.bg} ${colors.text} dark:${colors.bgDark} dark:${colors.textDark}`}
+                          title={`${count} team member${count > 1 ? 's' : ''} resist ${typeName}`}
                         >
-                          {typeName.charAt(0).toUpperCase() + typeName.slice(1)}
+                          {typeName.charAt(0).toUpperCase() + typeName.slice(1)}: {count}
                         </span>
                       );
                     })}
@@ -435,7 +303,7 @@ export function TeamSidebar() {
                 </div>
               )}
 
-              {weaknesses.length === 0 && resistances.length === 0 && (
+              {Object.keys(weaknesses).length === 0 && Object.keys(resistances).length === 0 && (
                 <div className="text-xs text-gray-500 dark:text-gray-400">
                   No significant weaknesses or resistances
                 </div>

@@ -12,9 +12,9 @@ function App() {
       <BrowserRouter>
         <TeamProvider>
           <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <div className="flex flex-col lg:flex-row gap-4 p-4 max-w-7xl mx-auto">
-              {/* Team Sidebar - Always visible */}
-              <aside className="w-full lg:w-80 flex-shrink-0">
+            <div className="flex flex-col lg:flex-row gap-4 p-4 mx-auto">
+              {/* Team Sidebar - Always visible, sticky when scrolling */}
+              <aside className="w-full lg:w-80 flex-shrink-0 lg:sticky lg:top-4 lg:self-start lg:max-h-[calc(100vh-2rem)] lg:overflow-y-auto">
                 <TeamSidebar />
               </aside>
               
