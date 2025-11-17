@@ -40,8 +40,13 @@ interface TeamTypeAnalysisResult {
  * Fetches type data from PokeAPI and aggregates defensive matchups for the entire team.
  * - Extracts unique types from team to avoid redundant API calls
  * - Fetches type data concurrently using useQueries
+ * - Calculates net effectiveness (damage multipliers) for dual-type Pokémon
  * - Counts how many team members are weak/resistant to each attacking type
- * - Does not cancel out types that appear in both weaknesses and resistances
+ * 
+ * Complex Logic: For each Pokémon, calculates the final damage multiplier against each
+ * attacking type by multiplying multipliers from all of the Pokémon's types. For example,
+ * a Fire/Steel type against Fire attacks: Fire type has 0.5x (half_damage_from), Steel
+ * type has 2x (double_damage_from), final multiplier = 0.5 * 2 = 1x (neutral).
  * 
  * @param team - Array of Pokemon objects, each with a types property
  * @returns Object with isLoading, weaknesses, and resistances
@@ -77,9 +82,9 @@ export function useTeamTypeAnalysis(team: PokemonWithTypes[]): TeamTypeAnalysisR
   });
 
   // Aggregate weaknesses and resistances
-  // Complex Logic: Counts team members weak/resistant to each attacking type
-  // Processes each Pokemon's types and aggregates damage relations
-  // FIX: Uses Sets per Pokemon to avoid double-counting 4x weaknesses (e.g., Bug/Steel weak to Fire)
+  // Complex Logic: Calculates net effectiveness (damage multipliers) for dual-type Pokémon
+  // For each Pokémon and each attacking type, multiplies damage multipliers from all types
+  // Example: Fire/Steel vs Fire attack = 0.5x * 2x = 1x (neutral, not counted)
   const { weaknesses, resistances } = useMemo(() => {
     // Early return if still loading or any query is missing data
     if (typeQueries.some((query) => query.isLoading) || typeQueries.some((query) => !query.data)) {
@@ -97,53 +102,79 @@ export function useTeamTypeAnalysis(team: PokemonWithTypes[]): TeamTypeAnalysisR
       }
     });
 
+    // All 18 Pokémon types as attacking types
+    const ALL_TYPES = [
+      'normal',
+      'fire',
+      'water',
+      'electric',
+      'grass',
+      'ice',
+      'fighting',
+      'poison',
+      'ground',
+      'flying',
+      'psychic',
+      'bug',
+      'rock',
+      'ghost',
+      'dragon',
+      'dark',
+      'steel',
+      'fairy',
+    ];
+
     // Iterate through each Pokemon in the team
     team.forEach((pokemon) => {
-      if (!pokemon.types || !Array.isArray(pokemon.types)) {
+      if (!pokemon.types || !Array.isArray(pokemon.types) || pokemon.types.length === 0) {
         return;
       }
 
-      // For each Pokemon, gather unique weaknesses and resistances from all its types
-      // Using Sets ensures de-duplication (prevents double-counting 4x weaknesses)
-      const pokemonUniqueWeaknesses = new Set<string>();
-      const pokemonUniqueResistances = new Set<string>();
+      // For each pokemon, iterate through every possible ATTACKING type
+      ALL_TYPES.forEach((attackingType) => {
+        let finalMultiplier = 1;
 
-      // Gather all weaknesses and resistances from all of this Pokemon's types
-      pokemon.types.forEach((typeObj) => {
-        const typeName = typeObj?.type?.name;
-        if (!typeName) {
-          return;
+        // Calculate the multiplier from all of the pokemon's types
+        // Complex Logic: Multiplies damage multipliers from each type to get final effectiveness
+        // Example: Fire type has 0.5x to Fire attacks, Steel type has 2x to Fire attacks
+        // Final = 0.5 * 2 = 1x (neutral)
+        pokemon.types.forEach((pokemonTypeInfo) => {
+          const typeName = pokemonTypeInfo?.type?.name;
+          if (!typeName) {
+            return;
+          }
+
+          const relations = typeDataMap.get(typeName);
+          if (!relations) {
+            return;
+          }
+
+          // Check if attacking type deals double damage (2x multiplier)
+          if (relations.double_damage_from.some((t) => t.name === attackingType)) {
+            finalMultiplier *= 2;
+          }
+
+          // Check if attacking type deals half damage (0.5x multiplier)
+          if (relations.half_damage_from.some((t) => t.name === attackingType)) {
+            finalMultiplier *= 0.5;
+          }
+
+          // Check if attacking type deals no damage (0x multiplier, immunity)
+          if (relations.no_damage_from.some((t) => t.name === attackingType)) {
+            finalMultiplier *= 0;
+          }
+        });
+
+        // After calculating the final multiplier for this pokemon against this attacking type
+        // Count based on the net effectiveness (official Pokémon damage calculation)
+        if (finalMultiplier > 1) {
+          // Pokemon is weak to this attacking type (e.g., 2x, 4x)
+          weaknessCounts[attackingType] = (weaknessCounts[attackingType] || 0) + 1;
+        } else if (finalMultiplier < 1) {
+          // Pokemon is resistant to this attacking type (e.g., 0.5x, 0.25x, 0x immune)
+          resistanceCounts[attackingType] = (resistanceCounts[attackingType] || 0) + 1;
         }
-
-        const relations = typeDataMap.get(typeName);
-        if (!relations) {
-          return;
-        }
-
-        // Add weaknesses from this type (double_damage_from)
-        relations.double_damage_from.forEach((type) => {
-          pokemonUniqueWeaknesses.add(type.name);
-        });
-
-        // Add resistances from this type (half_damage_from)
-        relations.half_damage_from.forEach((type) => {
-          pokemonUniqueResistances.add(type.name);
-        });
-
-        // Add immunities from this type (no_damage_from)
-        relations.no_damage_from.forEach((type) => {
-          pokemonUniqueResistances.add(type.name);
-        });
-      });
-
-      // Now increment the main counts using the unique sets
-      // Each Pokemon contributes at most +1 per weakness/resistance type
-      pokemonUniqueWeaknesses.forEach((weakness) => {
-        weaknessCounts[weakness] = (weaknessCounts[weakness] || 0) + 1;
-      });
-
-      pokemonUniqueResistances.forEach((resistance) => {
-        resistanceCounts[resistance] = (resistanceCounts[resistance] || 0) + 1;
+        // If finalMultiplier === 1, do nothing (neutral, not counted)
       });
     });
 
