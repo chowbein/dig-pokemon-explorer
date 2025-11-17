@@ -47,7 +47,6 @@ export function TeamSummary({ weaknesses, resistances }: TeamSummaryProps) {
    */
   const getTeamSummary = (): TeamSummaryResult => {
     const weaknessEntries = Object.entries(weaknesses);
-    const resistanceEntries = Object.entries(resistances);
     const resistanceTypes = new Set(Object.keys(resistances));
 
     // Rule 1: Critical Flaw - weakness count >= 3 with 0 resistances

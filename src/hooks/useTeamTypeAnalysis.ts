@@ -79,15 +79,21 @@ export function useTeamTypeAnalysis(team: PokemonWithTypes[]): TeamTypeAnalysisR
   // Aggregate weaknesses and resistances
   // Complex Logic: Counts team members weak/resistant to each attacking type
   // Processes each Pokemon's types and aggregates damage relations
+  // FIX: Uses Sets per Pokemon to avoid double-counting 4x weaknesses (e.g., Bug/Steel weak to Fire)
   const { weaknesses, resistances } = useMemo(() => {
+    // Early return if still loading or any query is missing data
+    if (typeQueries.some((query) => query.isLoading) || typeQueries.some((query) => !query.data)) {
+      return { weaknesses: {}, resistances: {} };
+    }
+
     const weaknessCounts: Record<string, number> = {};
     const resistanceCounts: Record<string, number> = {};
 
-    // Create a map of type name to type data for quick lookup
-    const typeDataMap = new Map<string, TypeDataResponse>();
+    // Create a map of type name to damage relations for quick lookup
+    const typeDataMap = new Map<string, TypeDataResponse['damage_relations']>();
     typeQueries.forEach((query) => {
-      if (query.data) {
-        typeDataMap.set(query.data.name, query.data);
+      if (query.data?.damage_relations) {
+        typeDataMap.set(query.data.name, query.data.damage_relations);
       }
     });
 
@@ -97,34 +103,47 @@ export function useTeamTypeAnalysis(team: PokemonWithTypes[]): TeamTypeAnalysisR
         return;
       }
 
-      // For each of the Pokemon's types, analyze damage relations
+      // For each Pokemon, gather unique weaknesses and resistances from all its types
+      // Using Sets ensures de-duplication (prevents double-counting 4x weaknesses)
+      const pokemonUniqueWeaknesses = new Set<string>();
+      const pokemonUniqueResistances = new Set<string>();
+
+      // Gather all weaknesses and resistances from all of this Pokemon's types
       pokemon.types.forEach((typeObj) => {
         const typeName = typeObj?.type?.name;
         if (!typeName) {
           return;
         }
 
-        const typeData = typeDataMap.get(typeName);
-        if (!typeData?.damage_relations) {
+        const relations = typeDataMap.get(typeName);
+        if (!relations) {
           return;
         }
 
-        const relations = typeData.damage_relations;
-
-        // Count weaknesses (double_damage_from)
+        // Add weaknesses from this type (double_damage_from)
         relations.double_damage_from.forEach((type) => {
-          weaknessCounts[type.name] = (weaknessCounts[type.name] || 0) + 1;
+          pokemonUniqueWeaknesses.add(type.name);
         });
 
-        // Count resistances (half_damage_from)
+        // Add resistances from this type (half_damage_from)
         relations.half_damage_from.forEach((type) => {
-          resistanceCounts[type.name] = (resistanceCounts[type.name] || 0) + 1;
+          pokemonUniqueResistances.add(type.name);
         });
 
-        // Count immunities (no_damage_from)
+        // Add immunities from this type (no_damage_from)
         relations.no_damage_from.forEach((type) => {
-          resistanceCounts[type.name] = (resistanceCounts[type.name] || 0) + 1;
+          pokemonUniqueResistances.add(type.name);
         });
+      });
+
+      // Now increment the main counts using the unique sets
+      // Each Pokemon contributes at most +1 per weakness/resistance type
+      pokemonUniqueWeaknesses.forEach((weakness) => {
+        weaknessCounts[weakness] = (weaknessCounts[weakness] || 0) + 1;
+      });
+
+      pokemonUniqueResistances.forEach((resistance) => {
+        resistanceCounts[resistance] = (resistanceCounts[resistance] || 0) + 1;
       });
     });
 

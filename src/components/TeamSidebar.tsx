@@ -31,7 +31,7 @@ export function TeamSidebar() {
   const { team, removePokemonFromTeam, addPokemonToTeam, isTeamFull, isPokemonInTeam } = useTeam();
   const [draggedOverSlot, setDraggedOverSlot] = useState<number | null>(null);
   const [isDraggingOverTeam, setIsDraggingOverTeam] = useState(false);
-  const [isLoadingCounterTypes, setIsLoadingCounterTypes] = useState(false);
+  const [loadingWeakness, setLoadingWeakness] = useState<string | null>(null);
   const navigate = useNavigate();
 
 
@@ -56,16 +56,6 @@ export function TeamSidebar() {
   // API Integration: Fetches type data from PokeAPI and aggregates weaknesses/resistances
   const { isLoading: isLoadingTypeAnalysis, weaknesses, resistances } =
     useTeamTypeAnalysis(teamWithTypes);
-
-  // Find the top weakness (highest count)
-  // Complex Logic: Identifies the biggest defensive weakness from team analysis
-  const topWeaknessType = useMemo(() => {
-    if (Object.keys(weaknesses).length === 0) return null;
-    
-    const entries = Object.entries(weaknesses);
-    const sorted = entries.sort(([, countA], [, countB]) => countB - countA);
-    return sorted[0]?.[0] || null;
-  }, [weaknesses]);
 
   /**
    * Extracts counter types and navigates to filtered list.
@@ -95,20 +85,20 @@ export function TeamSidebar() {
   };
 
   /**
-   * Handles "Find a Counter" button click.
-   * Fetches type data for the top weakness and extracts counter types.
+   * Handles "Find a Counter" button click for a specific weakness.
+   * Fetches type data for the weakness and extracts counter types.
    */
-  const handleFindCounter = async () => {
-    if (!topWeaknessType) return;
+  const handleFindCounter = async (weaknessName: string) => {
+    if (!weaknessName) return;
 
-    setIsLoadingCounterTypes(true);
+    setLoadingWeakness(weaknessName);
     try {
-      const typeData = await fetchTypeData(topWeaknessType);
-      extractAndNavigate(typeData, topWeaknessType);
+      const typeData = await fetchTypeData(weaknessName);
+      extractAndNavigate(typeData, weaknessName);
     } catch (error) {
       console.error('Failed to fetch counter types:', error);
     } finally {
-      setIsLoadingCounterTypes(false);
+      setLoadingWeakness(null);
     }
   };
 
@@ -355,13 +345,23 @@ export function TeamSidebar() {
                                 {/* Weaknesses Column */}
                                 <td className="px-2 py-1.5 text-left">
                                   {weakness ? (
-                                    <span
-                                      className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${getTypeColors(weakness[0]).bg} ${getTypeColors(weakness[0]).text} dark:${getTypeColors(weakness[0]).bgDark} dark:${getTypeColors(weakness[0]).textDark}`}
-                                      title={`${weakness[1]} team member${weakness[1] > 1 ? 's' : ''} weak to ${weakness[0]}`}
-                                    >
-                                      {weakness[0].charAt(0).toUpperCase() + weakness[0].slice(1)}
-                                      <span className="font-semibold">({weakness[1]})</span>
-                                    </span>
+                                    <div className="flex items-center gap-2">
+                                      <span
+                                        className={`inline-flex items-center gap-1.5 rounded px-2 py-0.5 text-xs font-medium ${getTypeColors(weakness[0]).bg} ${getTypeColors(weakness[0]).text} dark:${getTypeColors(weakness[0]).bgDark} dark:${getTypeColors(weakness[0]).textDark}`}
+                                        title={`${weakness[1]} team member${weakness[1] > 1 ? 's' : ''} weak to ${weakness[0]}`}
+                                      >
+                                        {weakness[0].charAt(0).toUpperCase() + weakness[0].slice(1)}
+                                        <span className="font-semibold">({weakness[1]})</span>
+                                      </span>
+                                      <button
+                                        onClick={() => handleFindCounter(weakness[0])}
+                                        disabled={loadingWeakness === weakness[0]}
+                                        className="px-2 py-1 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded transition-colors whitespace-nowrap"
+                                        title={`Find Pokemon that counter ${weakness[0]}`}
+                                      >
+                                        {loadingWeakness === weakness[0] ? 'Finding...' : 'Counter'}
+                                      </button>
+                                    </div>
                                   ) : (
                                     <span className="text-gray-400 dark:text-gray-600">—</span>
                                   )}
@@ -387,29 +387,6 @@ export function TeamSidebar() {
                       </tbody>
                     </table>
                   </div>
-                  
-                  {/* Top Weakness Recommendation */}
-                  {topWeaknessType && (
-                    <div className="mt-3 p-2 bg-red-50 dark:bg-red-900/20 rounded border border-red-200 dark:border-red-800">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex-1">
-                          <p className="text-xs font-medium text-red-800 dark:text-red-200 mb-1">
-                            Biggest Weakness:
-                          </p>
-                          <span className="inline-flex items-center px-2 py-1 rounded text-xs font-semibold bg-red-100 dark:bg-red-900 text-red-800 dark:text-red-200">
-                            {topWeaknessType.charAt(0).toUpperCase() + topWeaknessType.slice(1)}
-                          </span>
-                        </div>
-                        <button
-                          onClick={handleFindCounter}
-                          disabled={isLoadingCounterTypes || !topWeaknessType}
-                          className="px-3 py-1.5 text-xs font-medium bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white rounded transition-colors whitespace-nowrap"
-                        >
-                          {isLoadingCounterTypes ? 'Finding...' : 'Find a Counter'}
-                        </button>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
