@@ -31,9 +31,10 @@ export function PokemonListPage() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Read types from URL search parameter
-  // API Integration: Reads counter types from URL query string (?types=water,rock)
+  // Read types and weakness from URL search parameter
+  // API Integration: Reads counter types and weakness from URL query string (?types=water,rock&weakness=fire)
   const urlTypesParam = searchParams.get('types');
+  const weaknessParam = searchParams.get('weakness');
   const urlTypes = useMemo(() => {
     if (urlTypesParam) {
       return urlTypesParam.split(',').filter((type) => type.trim().length > 0);
@@ -42,6 +43,13 @@ export function PokemonListPage() {
   }, [urlTypesParam]);
 
   const hasUrlTypesFilter = urlTypes.length > 0;
+
+  /**
+   * Capitalizes the first letter of a string.
+   */
+  const capitalize = (str: string): string => {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  };
 
   // Fetch Pokemon filtered by URL types (counter recommendations)
   const {
@@ -180,10 +188,16 @@ export function PokemonListPage() {
         <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-200">
           Pokemon Explorer
         </h1>
-        {hasUrlTypesFilter && (
+        {hasUrlTypesFilter && weaknessParam && (
           <div className="flex items-center gap-3">
             <div className="text-sm text-gray-600 dark:text-gray-400">
-              Showing counters for: <span className="font-semibold text-gray-800 dark:text-gray-200">{urlTypes.join(', ')}</span>
+              Showing counters for{' '}
+              <span className="font-semibold text-red-600 dark:text-red-400">
+                {capitalize(weaknessParam)}
+              </span>{' '}
+              <span className="text-gray-500 dark:text-gray-500">
+                ({urlTypes.map((type) => capitalize(type)).join(', ')})
+              </span>
             </div>
             <button
               onClick={clearUrlFilter}

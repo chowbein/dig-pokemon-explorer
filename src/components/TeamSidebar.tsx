@@ -33,49 +33,6 @@ export function TeamSidebar() {
   const [isLoadingCounterTypes, setIsLoadingCounterTypes] = useState(false);
   const navigate = useNavigate();
 
-  /**
-   * Handles "Find a Counter" button click.
-   * Fetches type data for the top weakness and extracts counter types.
-   */
-  const handleFindCounter = async () => {
-    if (!topWeaknessType) return;
-
-    setIsLoadingCounterTypes(true);
-    try {
-      const typeData = await fetchTypeData(topWeaknessType);
-      extractAndNavigate(typeData);
-    } catch (error) {
-      console.error('Failed to fetch counter types:', error);
-    } finally {
-      setIsLoadingCounterTypes(false);
-    }
-  };
-
-  /**
-   * Extracts counter types and navigates to filtered list.
-   * Counter types are types that resist or are immune to the weakness
-   * (types that the weakness deals half or no damage to).
-   */
-  const extractAndNavigate = (typeData: { damage_relations?: { half_damage_to?: Array<{ name: string }>; no_damage_to?: Array<{ name: string }> } }) => {
-    if (!typeData?.damage_relations) return;
-
-    const counterTypes = new Set<string>();
-    
-    // Types that deal half damage to the weakness (resistant counters)
-    typeData.damage_relations.half_damage_to?.forEach((type: { name: string }) => {
-      counterTypes.add(type.name);
-    });
-
-    // Types that deal no damage to the weakness (immune counters)
-    typeData.damage_relations.no_damage_to?.forEach((type: { name: string }) => {
-      counterTypes.add(type.name);
-    });
-
-    // Navigate with counter types as URL parameter
-    const typesParam = Array.from(counterTypes).join(',');
-    navigate(`/?types=${typesParam}`);
-  };
-
 
   // Fetch Pokemon data for each team member (needed for display and type analysis)
   const pokemonQueries = useQueries({
@@ -108,6 +65,52 @@ export function TeamSidebar() {
     const sorted = entries.sort(([, countA], [, countB]) => countB - countA);
     return sorted[0]?.[0] || null;
   }, [weaknesses]);
+
+  /**
+   * Extracts counter types and navigates to filtered list.
+   * Counter types are types that resist or are immune to the weakness
+   * (types that the weakness deals half or no damage to).
+   */
+  const extractAndNavigate = (
+    typeData: { damage_relations?: { half_damage_to?: Array<{ name: string }>; no_damage_to?: Array<{ name: string }> } },
+    weaknessName: string
+  ) => {
+    if (!typeData?.damage_relations) return;
+
+    const counterTypes = new Set<string>();
+    
+    // Types that deal half damage to the weakness (resistant counters)
+    typeData.damage_relations.half_damage_to?.forEach((type: { name: string }) => {
+      counterTypes.add(type.name);
+    });
+
+    // Types that deal no damage to the weakness (immune counters)
+    typeData.damage_relations.no_damage_to?.forEach((type: { name: string }) => {
+      counterTypes.add(type.name);
+    });
+
+    // Navigate with counter types and weakness name as URL parameters
+    const typesParam = Array.from(counterTypes).join(',');
+    navigate(`/?types=${typesParam}&weakness=${weaknessName}`);
+  };
+
+  /**
+   * Handles "Find a Counter" button click.
+   * Fetches type data for the top weakness and extracts counter types.
+   */
+  const handleFindCounter = async () => {
+    if (!topWeaknessType) return;
+
+    setIsLoadingCounterTypes(true);
+    try {
+      const typeData = await fetchTypeData(topWeaknessType);
+      extractAndNavigate(typeData, topWeaknessType);
+    } catch (error) {
+      console.error('Failed to fetch counter types:', error);
+    } finally {
+      setIsLoadingCounterTypes(false);
+    }
+  };
 
   const isLoadingPokemon = pokemonQueries.some((query) => query.isLoading);
   const isLoading = isLoadingPokemon || isLoadingTypeAnalysis;
