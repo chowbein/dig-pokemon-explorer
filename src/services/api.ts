@@ -15,21 +15,7 @@ import type {
 } from '../types/pokemon';
 
 /** Base URL for the Pokemon API */
-const POKEAPI_BASE_URL = '/api';
-
-/**
- * Default fetch options for all API calls.
- * These options are optimized for incognito mode and cross-origin requests.
- */
-const DEFAULT_FETCH_OPTIONS: RequestInit = {
-  method: 'GET',
-  mode: 'cors', // Explicitly set CORS mode
-  cache: 'default', // Reverted to default cache behavior
-  credentials: 'omit', // Don't send cookies (better for incognito mode)
-  headers: {
-    'Accept': 'application/json',
-  },
-};
+const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
 
 /**
  * Fetches a paginated list of Pokemon from the Pokemon API.
@@ -50,7 +36,7 @@ export async function fetchPokemonList({
   const url = `${POKEAPI_BASE_URL}/pokemon?limit=20&offset=${pageParam}`;
 
   try {
-    const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(
@@ -87,7 +73,7 @@ export async function fetchPokemonList({
  */
 export async function fetchPokemon(url: string): Promise<Pokemon> {
   try {
-    const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(
@@ -124,7 +110,7 @@ export async function fetchPokemon(url: string): Promise<Pokemon> {
 export async function fetchPokemonByType(typeName: string): Promise<PokemonListItem[]> {
   try {
     const url = `${POKEAPI_BASE_URL}/type/${typeName.toLowerCase()}`;
-    const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(
@@ -162,7 +148,7 @@ export async function fetchPokemonByType(typeName: string): Promise<PokemonListI
 export async function fetchPokemonDetail(name: string): Promise<Pokemon> {
   try {
     const url = `${POKEAPI_BASE_URL}/pokemon/${name.toLowerCase()}`;
-    const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(
@@ -199,7 +185,7 @@ export async function fetchPokemonDetail(name: string): Promise<Pokemon> {
 export async function fetchPokemonSpecies(name: string): Promise<PokemonSpecies> {
   try {
     const url = `${POKEAPI_BASE_URL}/pokemon-species/${name.toLowerCase()}`;
-    const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(
@@ -237,7 +223,7 @@ export async function fetchEvolutionChain(
   evolutionChainUrl: string
 ): Promise<EvolutionChainItem[]> {
   try {
-    const response = await fetch(evolutionChainUrl, DEFAULT_FETCH_OPTIONS);
+    const response = await fetch(evolutionChainUrl);
 
     if (!response.ok) {
       throw new Error(
@@ -319,7 +305,7 @@ export async function fetchEvolutionChain(
 export async function fetchTypeData(typeName: string): Promise<TypeDataResponse> {
   try {
     const url = `${POKEAPI_BASE_URL}/type/${typeName.toLowerCase()}`;
-    const response = await fetch(url, DEFAULT_FETCH_OPTIONS);
+    const response = await fetch(url);
 
     if (!response.ok) {
       throw new Error(
