@@ -7,6 +7,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useQuery, useQueries } from '@tanstack/react-query';
 import { usePokemonDetail, useEvolutionChain } from '../hooks/usePokemon';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { ErrorDisplay } from '../components/ui/ErrorDisplay';
 import { getTypeColors } from '../lib/pokemonTypeColors';
 import { getHabitatBackground } from '../lib/pokemonHabitats';
 import { getHabitatWithInference } from '../lib/habitatInference';
@@ -23,7 +24,7 @@ import { useTeam } from '../context/TeamContext';
  */
 export function PokemonDetailPage() {
   const { name } = useParams<{ name: string }>();
-  const { data: pokemon, isLoading, isError, error } = usePokemonDetail(name || '');
+  const { data: pokemon, isLoading, isError, error, refetch } = usePokemonDetail(name || '');
   const {
     data: evolutionChain,
     isLoading: isLoadingEvolution,
@@ -125,20 +126,16 @@ export function PokemonDetailPage() {
   if (isError || !pokemon) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
-          <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
-            Error loading Pokemon
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {error?.message || 'Pokemon not found'}
-          </p>
-          <Link
-            to="/"
-            className="text-blue-600 dark:text-blue-400 hover:underline"
-          >
-            ← Back to Pokemon List
-          </Link>
-        </div>
+        <Link
+          to="/"
+          className="inline-block mb-4 text-blue-600 dark:text-blue-400 hover:underline"
+        >
+          ← Back to Pokemon List
+        </Link>
+        <ErrorDisplay 
+          error={error} 
+          onRetry={() => refetch()}
+        />
       </div>
     );
   }

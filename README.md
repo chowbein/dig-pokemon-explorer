@@ -22,6 +22,10 @@ This Pokemon Explorer is a web application that allows users to discover and lea
 2. Navigate to the project directory: `cd dig-pokemon-explorer`
 3. Install the dependencies: `npm install`
 
+> **Note:** The external PokeAPI service occasionally experiences outages;
+
+![Latest PokeAPI status](docs/screenshots/api-status.png)
+
 ## How to Run
 To start the development server, run the following command:
 `npm run dev`
@@ -29,7 +33,6 @@ To start the development server, run the following command:
 This will start the application on `http://localhost:5173` by default.
 
 ## Link to Vercel deployed app: `https://dig-pokemon-explorer.vercel.app/` 
-*Vercel deployed app is inconsistent, most reliable way is to open it in Google Chrome (not incognito)
 
 ## Challenges Faced and Solutions
 

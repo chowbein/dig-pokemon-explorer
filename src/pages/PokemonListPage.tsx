@@ -8,6 +8,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useInfinitePokemon, usePokemonByTypes, useFilteredPokemonByType } from '../hooks/usePokemon';
 import { PokemonCardWithData } from '../components/PokemonCardWithData';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { ErrorDisplay } from '../components/ui/ErrorDisplay';
 import { FilterPanel } from '../components/FilterPanel';
 import type { PokemonListItem } from '../types/pokemon';
 
@@ -193,19 +194,6 @@ export function PokemonListPage() {
     );
   }
 
-  if (isError) {
-    return (
-      <div className="flex flex-col justify-center items-center min-h-screen gap-4">
-        <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
-          Error loading Pokemon
-        </div>
-        <p className="text-gray-600 dark:text-gray-400">
-          {error?.message || 'An unexpected error occurred'}
-        </p>
-      </div>
-    );
-  }
-
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="flex items-center justify-between mb-8">
@@ -265,14 +253,22 @@ export function PokemonListPage() {
 
       {/* Error State */}
       {isError && (
-        <div className="flex flex-col justify-center items-center min-h-[400px] gap-4">
-          <div className="text-red-600 dark:text-red-400 text-lg font-semibold">
-            Error loading Pokemon
-          </div>
-          <p className="text-gray-600 dark:text-gray-400">
-            {error?.message || 'An unexpected error occurred'}
-          </p>
-        </div>
+        <ErrorDisplay 
+          error={error} 
+          onRetry={() => {
+            // Retry based on which filter is active
+            if (hasUrlTypesFilter) {
+              window.location.reload();
+            } else if (hasTypeFilter) {
+              // Re-trigger type filter by clearing and re-selecting
+              const types = [...selectedTypes];
+              setSelectedTypes([]);
+              setTimeout(() => setSelectedTypes(types), 100);
+            } else {
+              window.location.reload();
+            }
+          }}
+        />
       )}
 
       {/* Pokemon Grid */}

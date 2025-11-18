@@ -13,6 +13,7 @@ import {
   fetchPokemonSpecies,
   fetchEvolutionChain,
   fetchTypeData,
+  PokemonAPIError,
 } from '../services/api';
 import type { PokemonListResponse, Pokemon, PokemonListItem, EvolutionChainItem, TypeDataResponse, PokemonTypeResponse } from '../types/pokemon';
 
@@ -248,11 +249,24 @@ export function useFilteredPokemonByType(types: string[]) {
       queryKey: ['typeWithPokemon', typeName],
       queryFn: async (): Promise<PokemonTypeResponse> => {
         const url = `https://pokeapi.co/api/v2/type/${typeName.toLowerCase()}`;
-        const response = await fetch(url);
-        if (!response.ok) {
-          throw new Error(`Failed to fetch type: ${response.status} ${response.statusText}`);
+        try {
+          const response = await fetch(url);
+          if (!response.ok) {
+            throw new PokemonAPIError(
+              `Failed to fetch type: ${response.status} ${response.statusText}`,
+              response.status
+            );
+          }
+          return response.json();
+        } catch (error) {
+          if (error instanceof PokemonAPIError) {
+            throw error;
+          }
+          if (error instanceof Error) {
+            throw new PokemonAPIError(error.message);
+          }
+          throw new PokemonAPIError(`Unexpected error fetching type: ${String(error)}`);
         }
-        return response.json();
       },
       enabled: types.length > 0,
       staleTime: 1000 * 60 * 30, // 30 minutes

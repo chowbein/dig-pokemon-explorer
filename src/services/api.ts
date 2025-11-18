@@ -18,6 +18,34 @@ import type {
 const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
 
 /**
+ * Custom error class for Pokemon API failures.
+ * Provides user-friendly error messages for different failure scenarios.
+ */
+export class PokemonAPIError extends Error {
+  public readonly statusCode?: number;
+  public readonly isServerError: boolean;
+  public readonly userMessage: string;
+
+  constructor(message: string, statusCode?: number) {
+    super(message);
+    this.name = 'PokemonAPIError';
+    this.statusCode = statusCode;
+    this.isServerError = statusCode ? statusCode >= 500 : false;
+    
+    // Provide user-friendly messages
+    if (this.isServerError) {
+      this.userMessage = 'The PokeAPI service is currently experiencing issues. Please try again later.';
+    } else if (statusCode === 404) {
+      this.userMessage = 'The requested Pokemon data was not found.';
+    } else if (!statusCode) {
+      this.userMessage = 'Unable to connect to the Pokemon API. Please check your internet connection and try again.';
+    } else {
+      this.userMessage = 'An error occurred while fetching Pokemon data. Please try again.';
+    }
+  }
+}
+
+/**
  * Fetches a paginated list of Pokemon from the Pokemon API.
  * 
  * API Integration: https://pokeapi.co/api/v2/pokemon?limit=20&offset={pageParam}
@@ -39,8 +67,9 @@ export async function fetchPokemonList({
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch Pokemon list: ${response.status} ${response.statusText}`
+      throw new PokemonAPIError(
+        `Failed to fetch Pokemon list: ${response.status} ${response.statusText}`,
+        response.status
       );
     }
 
@@ -48,16 +77,20 @@ export async function fetchPokemonList({
 
     // Validate response structure to catch API changes
     if (!data.results || !Array.isArray(data.results)) {
-      throw new Error('Invalid response format from Pokemon API');
+      throw new PokemonAPIError('Invalid response format from Pokemon API');
     }
 
     return data;
   } catch (error) {
-    // Re-throw with context for React Query error handling
-    if (error instanceof Error) {
+    // Re-throw PokemonAPIError as-is
+    if (error instanceof PokemonAPIError) {
       throw error;
     }
-    throw new Error(`Unexpected error fetching Pokemon list: ${String(error)}`);
+    // Network errors or other failures
+    if (error instanceof Error) {
+      throw new PokemonAPIError(error.message);
+    }
+    throw new PokemonAPIError(`Unexpected error fetching Pokemon list: ${String(error)}`);
   }
 }
 
@@ -76,8 +109,9 @@ export async function fetchPokemon(url: string): Promise<Pokemon> {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch Pokemon: ${response.status} ${response.statusText}`
+      throw new PokemonAPIError(
+        `Failed to fetch Pokemon: ${response.status} ${response.statusText}`,
+        response.status
       );
     }
 
@@ -85,15 +119,18 @@ export async function fetchPokemon(url: string): Promise<Pokemon> {
 
     // Validate response structure
     if (!data.name || !data.id) {
-      throw new Error('Invalid response format from Pokemon API');
+      throw new PokemonAPIError('Invalid response format from Pokemon API');
     }
 
     return data;
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof PokemonAPIError) {
       throw error;
     }
-    throw new Error(`Unexpected error fetching Pokemon: ${String(error)}`);
+    if (error instanceof Error) {
+      throw new PokemonAPIError(error.message);
+    }
+    throw new PokemonAPIError(`Unexpected error fetching Pokemon: ${String(error)}`);
   }
 }
 
@@ -113,8 +150,9 @@ export async function fetchPokemonByType(typeName: string): Promise<PokemonListI
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch Pokemon by type: ${response.status} ${response.statusText}`
+      throw new PokemonAPIError(
+        `Failed to fetch Pokemon by type: ${response.status} ${response.statusText}`,
+        response.status
       );
     }
 
@@ -122,15 +160,18 @@ export async function fetchPokemonByType(typeName: string): Promise<PokemonListI
 
     // Extract Pokemon items from the type response
     if (!data.pokemon || !Array.isArray(data.pokemon)) {
-      throw new Error('Invalid response format from Pokemon Type API');
+      throw new PokemonAPIError('Invalid response format from Pokemon Type API');
     }
 
     return data.pokemon.map((entry) => entry.pokemon);
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof PokemonAPIError) {
       throw error;
     }
-    throw new Error(`Unexpected error fetching Pokemon by type: ${String(error)}`);
+    if (error instanceof Error) {
+      throw new PokemonAPIError(error.message);
+    }
+    throw new PokemonAPIError(`Unexpected error fetching Pokemon by type: ${String(error)}`);
   }
 }
 
@@ -151,8 +192,9 @@ export async function fetchPokemonDetail(name: string): Promise<Pokemon> {
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch Pokemon detail: ${response.status} ${response.statusText}`
+      throw new PokemonAPIError(
+        `Failed to fetch Pokemon detail: ${response.status} ${response.statusText}`,
+        response.status
       );
     }
 
@@ -160,15 +202,18 @@ export async function fetchPokemonDetail(name: string): Promise<Pokemon> {
 
     // Validate response structure
     if (!data.name || !data.id) {
-      throw new Error('Invalid response format from Pokemon API');
+      throw new PokemonAPIError('Invalid response format from Pokemon API');
     }
 
     return data;
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof PokemonAPIError) {
       throw error;
     }
-    throw new Error(`Unexpected error fetching Pokemon detail: ${String(error)}`);
+    if (error instanceof Error) {
+      throw new PokemonAPIError(error.message);
+    }
+    throw new PokemonAPIError(`Unexpected error fetching Pokemon detail: ${String(error)}`);
   }
 }
 
@@ -188,8 +233,9 @@ export async function fetchPokemonSpecies(name: string): Promise<PokemonSpecies>
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch Pokemon species: ${response.status} ${response.statusText}`
+      throw new PokemonAPIError(
+        `Failed to fetch Pokemon species: ${response.status} ${response.statusText}`,
+        response.status
       );
     }
 
@@ -197,15 +243,18 @@ export async function fetchPokemonSpecies(name: string): Promise<PokemonSpecies>
 
     // Validate response structure
     if (!data.name || !data.evolution_chain) {
-      throw new Error('Invalid response format from Pokemon Species API');
+      throw new PokemonAPIError('Invalid response format from Pokemon Species API');
     }
 
     return data;
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof PokemonAPIError) {
       throw error;
     }
-    throw new Error(`Unexpected error fetching Pokemon species: ${String(error)}`);
+    if (error instanceof Error) {
+      throw new PokemonAPIError(error.message);
+    }
+    throw new PokemonAPIError(`Unexpected error fetching Pokemon species: ${String(error)}`);
   }
 }
 
@@ -226,8 +275,9 @@ export async function fetchEvolutionChain(
     const response = await fetch(evolutionChainUrl);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch evolution chain: ${response.status} ${response.statusText}`
+      throw new PokemonAPIError(
+        `Failed to fetch evolution chain: ${response.status} ${response.statusText}`,
+        response.status
       );
     }
 
@@ -285,10 +335,13 @@ export async function fetchEvolutionChain(
 
     return evolutionChain;
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof PokemonAPIError) {
       throw error;
     }
-    throw new Error(`Unexpected error fetching evolution chain: ${String(error)}`);
+    if (error instanceof Error) {
+      throw new PokemonAPIError(error.message);
+    }
+    throw new PokemonAPIError(`Unexpected error fetching evolution chain: ${String(error)}`);
   }
 }
 
@@ -308,8 +361,9 @@ export async function fetchTypeData(typeName: string): Promise<TypeDataResponse>
     const response = await fetch(url);
 
     if (!response.ok) {
-      throw new Error(
-        `Failed to fetch type data: ${response.status} ${response.statusText}`
+      throw new PokemonAPIError(
+        `Failed to fetch type data: ${response.status} ${response.statusText}`,
+        response.status
       );
     }
 
@@ -317,14 +371,17 @@ export async function fetchTypeData(typeName: string): Promise<TypeDataResponse>
 
     // Validate response structure
     if (!data.name || !data.damage_relations) {
-      throw new Error('Invalid response format from Pokemon Type API');
+      throw new PokemonAPIError('Invalid response format from Pokemon Type API');
     }
 
     return data;
   } catch (error) {
-    if (error instanceof Error) {
+    if (error instanceof PokemonAPIError) {
       throw error;
     }
-    throw new Error(`Unexpected error fetching type data: ${String(error)}`);
+    if (error instanceof Error) {
+      throw new PokemonAPIError(error.message);
+    }
+    throw new PokemonAPIError(`Unexpected error fetching type data: ${String(error)}`);
   }
 }
