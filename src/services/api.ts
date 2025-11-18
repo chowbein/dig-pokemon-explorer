@@ -24,7 +24,7 @@ const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
 const DEFAULT_FETCH_OPTIONS: RequestInit = {
   method: 'GET',
   mode: 'cors', // Explicitly set CORS mode
-  cache: 'default', // Use browser's default cache behavior
+  cache: 'no-store', // Bypass cache completely (fixes incognito mode intermittent issues)
   credentials: 'omit', // Don't send cookies (better for incognito mode)
   headers: {
     'Accept': 'application/json',

@@ -251,7 +251,7 @@ export function useFilteredPokemonByType(types: string[]) {
         const response = await fetch(url, {
           method: 'GET',
           mode: 'cors',
-          cache: 'default',
+          cache: 'no-store', // Bypass cache completely (fixes incognito mode intermittent issues)
           credentials: 'omit',
           headers: {
             'Accept': 'application/json',
