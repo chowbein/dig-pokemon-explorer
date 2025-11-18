@@ -10,6 +10,17 @@ This Pokemon Explorer is a web application that allows users to discover and lea
 - **Advanced Filtering:** Easily filter Pokemon by type or search for specific Pokemon by name to quickly find what you're looking for. Additionally, you can improve the team you built by clicking the filter icon next to any of the weaknesses and the Pokemon list will be filtered by that type's counter helping you decide what additions would improve your team's composition.
 - **Habitat:** Know the habitat of each Pokemon through their background or through accessing their detailed view. This feature is intended to help players find the Pokemon they need to improve their team.
 
+## Screenshots
+### Pokemon List
+The Pokemon List view displays a comprehensive catalog of Pokemon with an infinite scroll feature. Users can apply filters based on Pokemon type or use the search bar to find specific Pokemon by name. This intuitive interface allows for seamless browsing and quick discovery.
+
+![Pokemon List](docs/screenshots/pokemon-list-view.png)
+
+### Pokemon Detail
+The Pokemon Detail view offers an in-depth look at each Pokemon's attributes. It includes detailed information about their stats, abilities, moves, and evolution chain. This view provides trainers with all the necessary data to understand a Pokemon's strengths and capabilities. Additionally, this is where you can see the habitat of a Pokemon.
+
+![Pokemon Detail](docs/screenshots/pokemon-detail-view.png)
+
 ## Technologies Used
 - **React:** A JavaScript library for building user interfaces.
 - **TypeScript:** A typed superset of JavaScript that compiles to plain JavaScript.
