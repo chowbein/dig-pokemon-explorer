@@ -66,7 +66,16 @@ export function useInfinitePokemon() {
 export function usePokemon(url: string | null) {
   return useQuery<Pokemon, Error>({
     queryKey: ['pokemon', url],
-    queryFn: () => fetchPokemon(url!),
+    queryFn: () => {
+      if (!url) {
+        throw new Error('URL is null');
+      }
+      // Handle absolute URLs from PokeAPI by routing them through the proxy
+      const proxyUrl = url.startsWith('http')
+        ? `/api/pokemon/${url.split('/').slice(-2).join('/')}`
+        : url;
+      return fetchPokemon(proxyUrl);
+    },
     enabled: !!url, // Only fetch if URL is provided
     staleTime: 1000 * 60 * 10, // 10 minutes (Pokemon data doesn't change often)
   });
@@ -126,7 +135,7 @@ export function usePokemonByTypes(selectedTypes: string[]) {
   const pokemonWithUrls = useMemo(() => {
     return filteredPokemon.map((p) => ({
       ...p,
-      url: `https://pokeapi.co/api/v2/pokemon/${p.name}`,
+      url: `/api/pokemon/${p.name}`,
     }));
   }, [filteredPokemon]);
 
@@ -247,11 +256,11 @@ export function useFilteredPokemonByType(types: string[]) {
     queries: types.map((typeName) => ({
       queryKey: ['typeWithPokemon', typeName],
       queryFn: async (): Promise<PokemonTypeResponse> => {
-        const url = `https://pokeapi.co/api/v2/type/${typeName.toLowerCase()}`;
+        const url = `/api/type/${typeName.toLowerCase()}`;
         const response = await fetch(url, {
           method: 'GET',
           mode: 'cors',
-          cache: 'no-store', // Bypass cache completely (fixes incognito mode intermittent issues)
+          cache: 'default', // Reverted to default cache behavior
           credentials: 'omit',
           headers: {
             'Accept': 'application/json',
@@ -282,10 +291,10 @@ export function useFilteredPokemonByType(types: string[]) {
             const pokemonName = entry.pokemon.name;
             if (!seenNames.has(pokemonName)) {
               seenNames.add(pokemonName);
-              // Manually construct the URL, as it might be missing
+              // Manually construct the URL to point to the proxy
               allPokemon.push({
                 name: pokemonName,
-                url: `https://pokeapi.co/api/v2/pokemon/${pokemonName}`,
+                url: `/api/pokemon/${pokemonName}`,
               });
             }
           });

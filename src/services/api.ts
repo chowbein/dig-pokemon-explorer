@@ -15,7 +15,7 @@ import type {
 } from '../types/pokemon';
 
 /** Base URL for the Pokemon API */
-const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
+const POKEAPI_BASE_URL = '/api';
 
 /**
  * Default fetch options for all API calls.
@@ -24,7 +24,7 @@ const POKEAPI_BASE_URL = 'https://pokeapi.co/api/v2';
 const DEFAULT_FETCH_OPTIONS: RequestInit = {
   method: 'GET',
   mode: 'cors', // Explicitly set CORS mode
-  cache: 'no-store', // Bypass cache completely (fixes incognito mode intermittent issues)
+  cache: 'default', // Reverted to default cache behavior
   credentials: 'omit', // Don't send cookies (better for incognito mode)
   headers: {
     'Accept': 'application/json',
