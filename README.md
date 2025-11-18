@@ -1,14 +1,14 @@
 # Pokemon Explorer
 
 ## Project Description
-Pokemon Explorer is a web application that allows users to discover and learn about Pokemon. It provides a comprehensive list of Pokemon with infinite scrolling, advanced filtering options, and a detailed view for each Pokemon. Additionally, it features a team builder that enables users to create and analyze their own Pokemon team.
+This Pokemon Explorer is a web application that allows users to discover and learn about Pokemon. It provides a comprehensive list of Pokemon with infinite scrolling, advanced filtering options, and a detailed view for each Pokemon. Additionally, it features a team builder that enables users to create and analyze their own Pokemon team with additonal habitat information for them to be able to know where they can find the Pokemon that completes their team!
 
 ## Features
 - **Infinite Scroll List:** Seamlessly browse through the entire list of Pokemon with an infinite scroll implementation.
 - **Detail View:** Access in-depth information for each Pokemon, including their stats, abilities, moves, and evolution chain.
 - **Team Builder:** Create your own team of up to six Pokemon and view a detailed analysis of your team's type strengths and weaknesses. The program recommends what you need to add or modify to the team depending on this information. To add a Pokemon to your team you can either click on a Pokemon and press the "Add to Team" button in the detailed view or drag it from the list and drop it into the team area.
 - **Advanced Filtering:** Easily filter Pokemon by type or search for specific Pokemon by name to quickly find what you're looking for. Additionally, you can improve the team you built by clicking the filter icon next to any of the weaknesses and the Pokemon list will be filtered by that type's counter helping you decide what additions would improve your team's composition.
-- **Habitat:** Know the habitat of each Pokemon through their background or through accessing their detailed view.
+- **Habitat:** Know the habitat of each Pokemon through their background or through accessing their detailed view. This feature is intended to help players find the Pokemon they need to improve their team.
 
 ## Technologies Used
 - **React:** A JavaScript library for building user interfaces.
@@ -32,9 +32,9 @@ This will start the application on `http://localhost:5173` by default.
 
 ## Challenges Faced and Solutions
 
-The entire app took ~10 hours to build and the most difficult part by far was trying to prioritize what was needed knowing full well that I won't be able to finish everything perfectly. A disciplined approach to choosing what's important to accomplish and not was key to addressing this. Specifically, I tried my best to make the end result something a person could actually make use of in addition to the requirements laid out. It is because of this that I chose to focus on implementing a team builder feature where the use case is a player trying to see and track what weaknesses and resistances their team currently has and provide them with an analysis on how it can be improved.
+The entire app took ~10 hours to build and the most difficult part by far was trying to prioritize what was needed knowing full well that I won't be able to finish everything perfectly. A disciplined approach to choosing what's important to accomplish and not was key to addressing this. Specifically, I tried my best to make the end result something a person could actually make use of in addition fulfilling the requirements laid out. It is because of this that I chose to focus on implementing a team builder feature where the use case is a player trying to see and track what weaknesses and resistances their team currently has and provide them with an analysis on how it can be improved.
 
-This brings me to the second challenge – usability. I have not played Pokemon in more than 10+ years (I played Pokemon Emerald in a Gameboy emulator) and forgot how most of this stuff worked. It is because of this that I was not able to truly validate the real usefulness of the app and had to review how to build the best possible way to build a team:
+This brings me to the second challenge – usability. I have not played Pokemon in more than 10+ years (I played Pokemon Emerald in a Gameboy emulator) and forgot how most of this stuff worked. It is because of this that I was not able to truly validate the real usefulness of the app and had to review the best possible way to build a team:
 
 `https://www.quora.com/What-would-be-an-example-of-a-well-balanced-team-in-your-favorite-video-game-Pokémon-LoL-or-any-others-What-makes-it-so-balanced-How-do-you-counter-it-if-its-unbalanced`
 
@@ -54,7 +54,7 @@ On the technical side, another challenge I faced was my inexperience and unfamil
 
 Other technical challenges that I spent significant time on fixing are the background images (the habitats) of some Pokemon not appearing. I discovered this because when selecting filters (especially for Fairy, Dark, or Steel types), most Pokemon displayed had no backgrounds. Initially, I suspected it was due to too many concurrent API calls causing failures. However, I noticed that unfiltered Pokemon showed backgrounds consistently even after extensive scrolling, which indicated it wasn't an API rate-limiting issue.
 
-Upon investigating the PokeAPI's `/pokemon-species/{name}` endpoint responses, I discovered that the `habitat` field returns `null` for most Generation V+ Pokemon. The API only has habitat data populated for approximately 60% of all Pokemon (mostly Gen I-IV), leaving newer generations without this information. I also discovered that scrolling enough times in the unfiltered list would eventually show the Pokemons that didn't have a background (habitat).
+Upon investigating the PokeAPI's `/pokemon-species/{name}` endpoint responses, I discovered that the `habitat` field returns `null` for most Generation V+ Pokemon. The API only has habitat data populated for approximately 60% of all Pokemon (mostly Gen I-IV), leaving newer generations without this information (the giving the players no way to know where to find the Pokemon). I also discovered that scrolling enough times in the unfiltered list would eventually show the Pokemons that didn't have a background (habitat).
 
 To solve this systematically, I built a **habitat inference system** (`habitatInference.ts`) that intelligently predicts habitats based on Pokemon type combinations:
 
@@ -71,4 +71,4 @@ To solve this systematically, I built a **habitat inference system** (`habitatIn
 
 This solution provides contextually appropriate backgrounds for 100% of Pokemon across all filters and pages, enhancing the visual experience while working around the API's incomplete data. The inference logic is based on observable patterns from Pokemon that do have habitat data, making the predictions ecologically and thematically accurate. 
 
-The last challenge faced is another technical one, particularly related to styling. This was my first time trying to use Tailwind and was not used to styling the elements inline with the elements (I got used to using class names and having a separate css file for all the styling). I realized this might be the tradeoff between the two methods and mainly addressed it by just learning the syntax and how it worked. I realized that this styling approach is better for more complex applications with frontend edge cases.
+The last challenge faced is another technical one, particularly related to styling. This was my first time trying to use Tailwind and was not used to styling the elements inline with the elements (I got used to using class names and having a separate css file for all the styling). I realized this might be the tradeoff between the two methods and mainly addressed it by just learning the syntax and how it worked. I realized that this styling approach is better for applications with more complex frontend design especially those with edge cases.
