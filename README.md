@@ -28,7 +28,8 @@ To start the development server, run the following command:
 
 This will start the application on `http://localhost:5173` by default.
 
-## Link to Vercel deployed app: `https://dig-pokemon-explorer.vercel.app/`
+## Link to Vercel deployed app: `https://dig-pokemon-explorer.vercel.app/` 
+*Vercel deployed app is inconsistent, most reliable way is to open it in Google Chrome (not incognito)
 
 ## Challenges Faced and Solutions
 
