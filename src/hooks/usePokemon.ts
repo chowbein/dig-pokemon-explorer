@@ -248,7 +248,15 @@ export function useFilteredPokemonByType(types: string[]) {
       queryKey: ['typeWithPokemon', typeName],
       queryFn: async (): Promise<PokemonTypeResponse> => {
         const url = `https://pokeapi.co/api/v2/type/${typeName.toLowerCase()}`;
-        const response = await fetch(url);
+        const response = await fetch(url, {
+          method: 'GET',
+          mode: 'cors',
+          cache: 'default',
+          credentials: 'omit',
+          headers: {
+            'Accept': 'application/json',
+          },
+        });
         if (!response.ok) {
           throw new Error(`Failed to fetch type: ${response.status} ${response.statusText}`);
         }
